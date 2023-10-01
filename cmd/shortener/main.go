@@ -13,15 +13,15 @@ var urls map[string]string
 
 const serverAddr = "http://localhost:8080"
 
-func getShortUrl(url string) (string) {
+func getShortURL(url string) (string) {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	const urlLength = 8
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	shortUrl := make([]byte, urlLength)
-	for i := range shortUrl {
-		shortUrl[i] = charset[r.Intn(len(charset))]
+	shortURL := make([]byte, urlLength)
+	for i := range shortURL {
+		shortURL[i] = charset[r.Intn(len(charset))]
 	}
-	return string(shortUrl)
+	return string(shortURL)
 }
 
 
@@ -33,11 +33,11 @@ func mainHandler(w http.ResponseWriter, r *http.Request){
 			return
 		}
 		urlToShort := string(body)
-		shortenedUrl := getShortUrl(urlToShort)
-		urls[shortenedUrl] = urlToShort
+		shortenedURL := getShortURL(urlToShort)
+		urls[shortenedURL] = urlToShort
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte(fmt.Sprintf("%s/%s", serverAddr, shortenedUrl)))
+		w.Write([]byte(fmt.Sprintf("%s/%s", serverAddr, shortenedURL)))
 	
 	} else if r.Method == http.MethodGet {
 
