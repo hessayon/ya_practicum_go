@@ -24,3 +24,5 @@ vendor/
 
 # local autotest
 shortenertest
+
+go.sum
