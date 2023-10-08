@@ -1,12 +1,14 @@
 package handlers
 
 import (
-	"github.com/hessayon/ya_practicum_go/internal/storage"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/hessayon/ya_practicum_go/internal/storage"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCreateShortURLHandler(t *testing.T) {
@@ -34,8 +36,11 @@ func TestCreateShortURLHandler(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			storage.URLs = map[string]string{}
 			request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(test.requestBody))
+			router := chi.NewRouter()
+			router.Get("/{id}", DecodeShortURLHandler)
+			router.Post("/", CreateShortURLHandler)
 			w := httptest.NewRecorder()
-			CreateShortURLHandler(w, request)
+			router.ServeHTTP(w, request)
 			res := w.Result()
 			assert.Equal(t, test.want.code, res.StatusCode)
 			assert.Equal(t, test.want.contentType, res.Header.Get("Content-Type"))
@@ -78,13 +83,13 @@ func TestDecodeShortURLHandler(t *testing.T) {
 			},
 		},
 		{
-			name: "negative test#1",
+			name: "negative test#2",
 			storage: map[string]string{
 				"EwHXdJfB": "https://practicum.yandex.ru/",
 			},
 			requestURL: "/EwHXdJfB/yhfjOHdb",
 			want: want{
-				code:                400,
+				code:                404,
 				locationHeaderValue: "",
 			},
 		},
@@ -92,9 +97,12 @@ func TestDecodeShortURLHandler(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			storage.URLs = test.storage
-			request := httptest.NewRequest(http.MethodGet, "/EwHXdJfB", nil)
+			request := httptest.NewRequest(http.MethodGet, test.requestURL, nil)
+			router := chi.NewRouter()
+			router.Get("/{id}", DecodeShortURLHandler)
+			router.Post("/", CreateShortURLHandler)
 			w := httptest.NewRecorder()
-			DecodeShortURLHandler(w, request)
+			router.ServeHTTP(w, request)
 			res := w.Result()
 			assert.Equal(t, test.want.code, res.StatusCode)
 			assert.Equal(t, test.want.locationHeaderValue, res.Header.Get("Location"))
