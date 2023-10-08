@@ -7,8 +7,6 @@ import (
 	"github.com/hessayon/ya_practicum_go/internal/storage"
 )
 
-
-
 func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc(`/`, handlers.MainHandler)

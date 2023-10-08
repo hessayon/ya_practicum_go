@@ -1,12 +1,12 @@
 package handlers
 
 import (
+	"github.com/hessayon/ya_practicum_go/internal/storage"
+	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"github.com/stretchr/testify/assert"
-	"github.com/hessayon/ya_practicum_go/internal/storage"
 )
 
 func TestCreateShortURLHandler(t *testing.T) {
@@ -16,20 +16,20 @@ func TestCreateShortURLHandler(t *testing.T) {
 		contentType string
 	}
 	tests := []struct {
-		name    string
+		name        string
 		requestBody string
-		want    want
+		want        want
 	}{
 		{
-			name: "positive test#1",
+			name:        "positive test#1",
 			requestBody: "https://practicum.yandex.ru/",
 			want: want{
-				code: 201,
+				code:        201,
 				contentType: "text/plain",
 			},
 		},
 	}
-	
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			storage.URLs = map[string]string{}
@@ -37,7 +37,7 @@ func TestCreateShortURLHandler(t *testing.T) {
 			w := httptest.NewRecorder()
 			MainHandler(w, request)
 			res := w.Result()
-      assert.Equal(t, test.want.code, res.StatusCode)
+			assert.Equal(t, test.want.code, res.StatusCode)
 			assert.Equal(t, test.want.contentType, res.Header.Get("Content-Type"))
 		})
 	}
@@ -45,45 +45,45 @@ func TestCreateShortURLHandler(t *testing.T) {
 
 func TestDecodeShortURLHandler(t *testing.T) {
 	type want struct {
-		code        int
+		code                int
 		locationHeaderValue string
 	}
 	tests := []struct {
-		name    string
-		storage map[string]string
+		name       string
+		storage    map[string]string
 		requestURL string
-		want    want
+		want       want
 	}{
 		{
 			name: "positive test#1",
 			storage: map[string]string{
-				"EwHXdJfB" : "https://practicum.yandex.ru/",
+				"EwHXdJfB": "https://practicum.yandex.ru/",
 			},
 			requestURL: "/EwHXdJfB",
 			want: want{
-				code: 307,
+				code:                307,
 				locationHeaderValue: "https://practicum.yandex.ru/",
 			},
 		},
 		{
 			name: "negative test#1",
 			storage: map[string]string{
-				"EwHXdJfB" : "https://practicum.yandex.ru/",
+				"EwHXdJfB": "https://practicum.yandex.ru/",
 			},
 			requestURL: "/yhfjOHdb",
 			want: want{
-				code: 400,
+				code:                400,
 				locationHeaderValue: "",
 			},
 		},
 		{
 			name: "negative test#1",
 			storage: map[string]string{
-				"EwHXdJfB" : "https://practicum.yandex.ru/",
+				"EwHXdJfB": "https://practicum.yandex.ru/",
 			},
 			requestURL: "/EwHXdJfB/yhfjOHdb",
 			want: want{
-				code: 400,
+				code:                400,
 				locationHeaderValue: "",
 			},
 		},
