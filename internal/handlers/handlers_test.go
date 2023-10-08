@@ -35,7 +35,7 @@ func TestCreateShortURLHandler(t *testing.T) {
 			storage.URLs = map[string]string{}
 			request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(test.requestBody))
 			w := httptest.NewRecorder()
-			MainHandler(w, request)
+			CreateShortURLHandler(w, request)
 			res := w.Result()
 			assert.Equal(t, test.want.code, res.StatusCode)
 			assert.Equal(t, test.want.contentType, res.Header.Get("Content-Type"))
@@ -92,9 +92,9 @@ func TestDecodeShortURLHandler(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			storage.URLs = test.storage
-			request := httptest.NewRequest(http.MethodGet, test.requestURL, nil)
+			request := httptest.NewRequest(http.MethodGet, "/EwHXdJfB", nil)
 			w := httptest.NewRecorder()
-			MainHandler(w, request)
+			DecodeShortURLHandler(w, request)
 			res := w.Result()
 			assert.Equal(t, test.want.code, res.StatusCode)
 			assert.Equal(t, test.want.locationHeaderValue, res.Header.Get("Location"))
