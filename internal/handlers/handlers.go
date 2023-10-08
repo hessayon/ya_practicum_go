@@ -27,7 +27,7 @@ func getShortURL(url string) string {
 func CreateShortURLHandler(w http.ResponseWriter, r *http.Request) error {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		return errors.New("Error in reading of request's body")
+		return errors.New("error in reading of request's body")
 	}
 	urlToShort := string(body)
 	shortenedURL := getShortURL(urlToShort)
@@ -41,16 +41,16 @@ func CreateShortURLHandler(w http.ResponseWriter, r *http.Request) error {
 
 func DecodeShortURLHandler(w http.ResponseWriter, r *http.Request) error {
 	if strings.Count(r.URL.Path, "/") > 1 {
-		return errors.New("Unsupported URL")
+		return errors.New("unsupported URL")
 	}
 	splittedURLPath := strings.Split(r.URL.Path, "/")
 	if len(splittedURLPath) < 2 {
-		return errors.New("Unsupported URL")
+		return errors.New("unsupported URL")
 	}
 	shortenedURL := splittedURLPath[1]
 	originalURL, found := storage.URLs[shortenedURL]
 	if !found {
-		return errors.New("Shortened url not found")
+		return errors.New("shortened url not found")
 	}
 	w.Header().Set("Location", originalURL)
 	w.WriteHeader(http.StatusTemporaryRedirect)

@@ -39,6 +39,7 @@ func TestCreateShortURLHandler(t *testing.T) {
 			res := w.Result()
 			assert.Equal(t, test.want.code, res.StatusCode)
 			assert.Equal(t, test.want.contentType, res.Header.Get("Content-Type"))
+			res.Body.Close()
 		})
 	}
 }
@@ -97,6 +98,7 @@ func TestDecodeShortURLHandler(t *testing.T) {
 			res := w.Result()
 			assert.Equal(t, test.want.code, res.StatusCode)
 			assert.Equal(t, test.want.locationHeaderValue, res.Header.Get("Location"))
+			res.Body.Close()
 		})
 	}
 }
