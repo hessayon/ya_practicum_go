@@ -3,7 +3,6 @@ package handlers
 import (
 	"fmt"
 	"io"
-	"log"
 	"math/rand"
 	"net/http"
 	"time"
@@ -43,7 +42,6 @@ func CreateShortURLHandler(w http.ResponseWriter, r *http.Request){
 func DecodeShortURLHandler(w http.ResponseWriter, r *http.Request){
 	
 	shortenedURL := chi.URLParam(r, "id")
-	log.Print(shortenedURL)
 	originalURL, found := storage.URLs[shortenedURL]
 	if !found {
 		http.Error(w, "shortened url not found",  http.StatusBadRequest)
