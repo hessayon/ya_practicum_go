@@ -1,14 +1,15 @@
 package handlers
 
 import (
-	"errors"
 	"fmt"
-	"github.com/hessayon/ya_practicum_go/internal/storage"
 	"io"
+	"log"
 	"math/rand"
 	"net/http"
-	"strings"
 	"time"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/hessayon/ya_practicum_go/internal/storage"
 )
 
 const serverAddr = "http://localhost:8080"
@@ -24,10 +25,11 @@ func getShortURL(url string) string {
 	return string(shortURL)
 }
 
-func CreateShortURLHandler(w http.ResponseWriter, r *http.Request) error {
+func CreateShortURLHandler(w http.ResponseWriter, r *http.Request){
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		return errors.New("error in reading of request's body")
+		http.Error(w, "error in reading of request's body",  http.StatusBadRequest)
+		return
 	}
 	urlToShort := string(body)
 	shortenedURL := getShortURL(urlToShort)
@@ -36,42 +38,19 @@ func CreateShortURLHandler(w http.ResponseWriter, r *http.Request) error {
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte(fmt.Sprintf("%s/%s", serverAddr, shortenedURL)))
-	return nil
 }
 
-func DecodeShortURLHandler(w http.ResponseWriter, r *http.Request) error {
-	if strings.Count(r.URL.Path, "/") > 1 {
-		return errors.New("unsupported URL")
-	}
-	splittedURLPath := strings.Split(r.URL.Path, "/")
-	if len(splittedURLPath) < 2 {
-		return errors.New("unsupported URL")
-	}
-	shortenedURL := splittedURLPath[1]
+func DecodeShortURLHandler(w http.ResponseWriter, r *http.Request){
+	
+	shortenedURL := chi.URLParam(r, "id")
+	log.Print(shortenedURL)
 	originalURL, found := storage.URLs[shortenedURL]
 	if !found {
-		return errors.New("shortened url not found")
+		http.Error(w, "shortened url not found",  http.StatusBadRequest)
+		return
 	}
 	w.Header().Set("Location", originalURL)
 	w.WriteHeader(http.StatusTemporaryRedirect)
-	return nil
+	return
 }
 
-func MainHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		err := CreateShortURLHandler(w, r)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-	} else if r.Method == http.MethodGet {
-		err := DecodeShortURLHandler(w, r)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-	} else {
-		http.Error(w, "Method is not allowed", http.StatusBadRequest)
-		return
-	}
-}
