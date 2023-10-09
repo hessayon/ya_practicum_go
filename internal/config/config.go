@@ -3,9 +3,9 @@ package config
 import (
 	"errors"
 	"flag"
+	"os"
 	"strconv"
 	"strings"
-	"os"
 )
 
 type serviceConfig struct {
