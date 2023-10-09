@@ -8,10 +8,9 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/hessayon/ya_practicum_go/internal/config"
 	"github.com/hessayon/ya_practicum_go/internal/storage"
 )
-
-const serverAddr = "http://localhost:8080"
 
 func getShortURL(url string) string {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -24,10 +23,10 @@ func getShortURL(url string) string {
 	return string(shortURL)
 }
 
-func CreateShortURLHandler(w http.ResponseWriter, r *http.Request){
+func CreateShortURLHandler(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "error in reading of request's body",  http.StatusBadRequest)
+		http.Error(w, "error in reading of request's body", http.StatusBadRequest)
 		return
 	}
 	urlToShort := string(body)
@@ -36,18 +35,17 @@ func CreateShortURLHandler(w http.ResponseWriter, r *http.Request){
 	storage.URLs[shortenedURL] = urlToShort
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(fmt.Sprintf("%s/%s", serverAddr, shortenedURL)))
+	w.Write([]byte(fmt.Sprintf("%s/%s", config.ServiceConfig.BaseAddr, shortenedURL)))
 }
 
-func DecodeShortURLHandler(w http.ResponseWriter, r *http.Request){
-	
+func DecodeShortURLHandler(w http.ResponseWriter, r *http.Request) {
+
 	shortenedURL := chi.URLParam(r, "id")
 	originalURL, found := storage.URLs[shortenedURL]
 	if !found {
-		http.Error(w, "shortened url not found",  http.StatusBadRequest)
+		http.Error(w, "shortened url not found", http.StatusBadRequest)
 		return
 	}
 	w.Header().Set("Location", originalURL)
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
-
