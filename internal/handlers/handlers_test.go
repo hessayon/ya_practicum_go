@@ -37,8 +37,8 @@ func TestCreateShortURLHandler(t *testing.T) {
 			storage.URLs = map[string]string{}
 			request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(test.requestBody))
 			router := chi.NewRouter()
-			router.Get("/{id}", DecodeShortURLHandler)
-			router.Post("/", CreateShortURLHandler)
+			router.Get("/{id}", DecodeShortURL)
+			router.Post("/", CreateShortURL)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, request)
 			res := w.Result()
@@ -99,8 +99,8 @@ func TestDecodeShortURLHandler(t *testing.T) {
 			storage.URLs = test.storage
 			request := httptest.NewRequest(http.MethodGet, test.requestURL, nil)
 			router := chi.NewRouter()
-			router.Get("/{id}", DecodeShortURLHandler)
-			router.Post("/", CreateShortURLHandler)
+			router.Get("/{id}", DecodeShortURL)
+			router.Post("/", CreateShortURL)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, request)
 			res := w.Result()

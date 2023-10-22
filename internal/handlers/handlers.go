@@ -23,7 +23,7 @@ func getShortURL(url string) string {
 	return string(shortURL)
 }
 
-func CreateShortURLHandler(w http.ResponseWriter, r *http.Request) {
+func CreateShortURL(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "error in reading of request's body", http.StatusBadRequest)
@@ -38,7 +38,7 @@ func CreateShortURLHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(fmt.Sprintf("%s/%s", config.ServiceConfig.BaseAddr, shortenedURL)))
 }
 
-func DecodeShortURLHandler(w http.ResponseWriter, r *http.Request) {
+func DecodeShortURL(w http.ResponseWriter, r *http.Request) {
 
 	shortenedURL := chi.URLParam(r, "id")
 	originalURL, found := storage.URLs[shortenedURL]
