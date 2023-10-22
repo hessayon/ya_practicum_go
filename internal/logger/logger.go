@@ -36,9 +36,13 @@ func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 var Log *zap.Logger = zap.NewNop()
 
 
-func InitServiceLogger() error {
-
+func InitServiceLogger(level string) error {
+	logLevel, err := zap.ParseAtomicLevel(level)
+	if err != nil {
+			return err
+	}
 	cfg := zap.NewDevelopmentConfig()
+	cfg.Level = logLevel
 	zlogger, err := cfg.Build()
 	if err != nil {
 		return err

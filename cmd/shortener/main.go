@@ -19,7 +19,7 @@ func main() {
 	}
 	router.InitServiceRouter()
 
-	err = logger.InitServiceLogger()
+	err = logger.InitServiceLogger("INFO")
 	if err != nil {
 		log.Fatalf("Error in InitServiceLogger: %s", err.Error())
 	}
