@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"math/rand"
@@ -9,8 +10,18 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/hessayon/ya_practicum_go/internal/config"
+	"github.com/hessayon/ya_practicum_go/internal/logger"
 	"github.com/hessayon/ya_practicum_go/internal/storage"
+	"go.uber.org/zap"
 )
+
+type requestBody struct{
+	URL string `json:"url"`
+}
+
+type responseBody struct{
+	ShortenURL string `json:"result"`
+}
 
 func getShortURL(url string) string {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -48,4 +59,29 @@ func DecodeShortURL(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Location", originalURL)
 	w.WriteHeader(http.StatusTemporaryRedirect)
+}
+
+
+
+func CreateShortURLJSON(w http.ResponseWriter, r *http.Request) {
+	var reqBody requestBody
+	err := json.NewDecoder(r.Body).Decode(&reqBody)
+	if err != nil {
+		http.Error(w, "error in decoding of request's body", http.StatusBadRequest)
+		return
+	}
+
+	shortenedURL := getShortURL(reqBody.URL)
+	storage.URLs[shortenedURL] = reqBody.URL
+	respBody := responseBody{
+		ShortenURL: fmt.Sprintf("%s/%s", config.ServiceConfig.BaseAddr, shortenedURL),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	if err := json.NewEncoder(w).Encode(respBody); err != nil{
+		logger.Log.Error("error in encoding response body", zap.String("originalURL", reqBody.URL) ,zap.String("shortenURL", respBody.ShortenURL))
+		http.Error(w, "service internal error", http.StatusBadRequest)
+		return
+	}
 }

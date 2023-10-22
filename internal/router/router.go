@@ -12,4 +12,5 @@ func InitServiceRouter() {
 	Router = chi.NewRouter()
 	Router.Post("/", logger.RequestLogger(handlers.CreateShortURL))
 	Router.Get("/{id}", logger.RequestLogger(handlers.DecodeShortURL))
+	Router.Post("/api/shorten", logger.RequestLogger(handlers.CreateShortURLJSON))
 }

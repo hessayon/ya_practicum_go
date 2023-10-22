@@ -110,3 +110,51 @@ func TestDecodeShortURLHandler(t *testing.T) {
 		})
 	}
 }
+
+
+func TestCreateShortURLJSONHandler(t *testing.T) {
+
+	type want struct {
+		code        int
+		contentType string
+	}
+	tests := []struct {
+		name        string
+		requestBody string
+		want        want
+	}{
+		{
+			name:        "positive test#1",
+			requestBody: "{\"url\": \"https://practicum.yandex.ru\"}",
+			want: want{
+				code:        201,
+				contentType: "application/json",
+			},
+		},
+		{
+			name:        "negative test#1: emptyBody",
+			requestBody: "",
+			want: want{
+				code:        400,
+				contentType: "text/plain; charset=utf-8",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			storage.URLs = map[string]string{}
+			request := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(test.requestBody))
+			router := chi.NewRouter()
+			router.Get("/{id}", DecodeShortURL)
+			router.Post("/", CreateShortURL)
+			router.Post("/api/shorten", CreateShortURLJSON)
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, request)
+			res := w.Result()
+			assert.Equal(t, test.want.code, res.StatusCode)
+			assert.Equal(t, test.want.contentType, res.Header.Get("Content-Type"))
+			res.Body.Close()
+		})
+	}
+}
