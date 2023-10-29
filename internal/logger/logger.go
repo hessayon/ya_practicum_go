@@ -71,10 +71,13 @@ func RequestLogger(h http.HandlerFunc) http.HandlerFunc {
 			zap.String("uri", r.RequestURI),
 			zap.String("method", r.Method),
 			zap.String("duration", duration.String()),
+			zap.Strings("content_encoding", r.Header.Values("Content-Encoding")),
+			zap.Strings("accept_encoding", r.Header.Values("Accept-Encoding")),
 		)
 		Log.Info("response to incoming HTTP request",
 			zap.Int("status", responseData.status),
 			zap.Int("size", responseData.size),
+			zap.Strings("accept_encoding", r.Header.Values("Accept-Encoding")),
 		)
 	})
 }
