@@ -7,6 +7,9 @@ import (
 	"strings"
 )
 
+func isGzipContentType(contentType string) bool{
+	return contentType == "application/json" || contentType == "text/html"
+}
 // compressWriter реализует интерфейс http.ResponseWriter и позволяет прозрачно для сервера
 // сжимать передаваемые данные и выставлять правильные HTTP-заголовки
 type compressWriter struct {
@@ -26,15 +29,14 @@ func (compressWr *compressWriter) Header() http.Header {
 }
 
 func (compressWr *compressWriter) Write(p []byte) (int, error) {
-	contentType := compressWr.Header().Get("Content-Type")
-	if contentType == "application/json" || contentType == "text/html" {
+	if isGzipContentType(compressWr.Header().Get("Content-Type")) {
 		return compressWr.zw.Write(p)
 	}
 	return compressWr.w.Write(p)
 }
 
 func (compressWr *compressWriter) WriteHeader(statusCode int) {
-	if statusCode < 400 {
+	if statusCode < 400  && isGzipContentType(compressWr.Header().Get("Content-Type")){
 		compressWr.w.Header().Set("Content-Encoding", "gzip")
 	}
 	compressWr.w.WriteHeader(statusCode)
@@ -96,7 +98,7 @@ func GzipCompress(h http.HandlerFunc) http.HandlerFunc {
 		// проверяем, что клиент умеет получать от сервера сжатые данные в формате gzip
 		supportsGzip := checkSupportOfGzip(r.Header.Values("Accept-Encoding"))
 
-		if supportsGzip {
+		if isGzipContentType(r.Header.Get("Content-Type")) && supportsGzip{
 			compressWr := newCompressWriter(w)
 			currentWriter = compressWr
 			defer compressWr.Close()
