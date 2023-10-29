@@ -116,6 +116,6 @@ func GzipCompress(h http.HandlerFunc) http.HandlerFunc {
 			defer cr.Close()
 		}
 
-		h.ServeHTTP(currentWriter, r)
+		h(currentWriter, r)
 	}
 }
