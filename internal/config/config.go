@@ -12,14 +12,16 @@ type serviceConfig struct {
 	Host     string
 	Port     int
 	BaseAddr string
+	Filename string
 }
 
 var ServiceConfig serviceConfig
 
 func InitServiceConfig() error {
-	var serviceAddr, baseAddr string
+	var serviceAddr, baseAddr, filename string
 	flag.StringVar(&serviceAddr, "a", ":8080", "address and port to run server")
 	flag.StringVar(&baseAddr, "b", "http://localhost:8080", "base address of result shortened URL")
+	flag.StringVar(&filename, "f", "", "filename of url storage")
 	flag.Parse()
 	if envServiceAddr := os.Getenv("SERVER_ADDRESS"); envServiceAddr != "" {
 		serviceAddr = envServiceAddr
@@ -38,6 +40,10 @@ func InitServiceConfig() error {
 		baseAddr = envBaseAddr
 	}
 	ServiceConfig.BaseAddr = baseAddr
+	if envFilename := os.Getenv("FILE_STORAGE_PATH"); envFilename != ""{
+		filename = envFilename
+	}
+	ServiceConfig.Filename = filename
 	return nil
 
 }
