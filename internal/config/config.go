@@ -54,3 +54,14 @@ func NewServiceConfig() (*serviceConfig, error) {
 	} , nil
 
 }
+
+
+
+func NewDefaultServiceConfig() *serviceConfig {
+	return &serviceConfig{
+		Host: "",
+		Port: 8080,
+		BaseAddr: "http://localhost:8080",
+		Filename: "",
+	}
+}
