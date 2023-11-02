@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/hessayon/ya_practicum_go/internal/config"
 	"github.com/hessayon/ya_practicum_go/internal/storage"
 	"github.com/stretchr/testify/assert"
 )
@@ -34,6 +35,7 @@ func TestCreateShortURLHandler(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			config.ServiceConfig = config.NewDefaultServiceConfig()
 			storage.Storage, _ = storage.NewURLStorage("")
 			request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(test.requestBody))
 			router := chi.NewRouter()
@@ -96,6 +98,8 @@ func TestDecodeShortURLHandler(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			config.ServiceConfig = config.NewDefaultServiceConfig()
+			storage.Storage, _ = storage.NewURLStorage("")
 			storage.Storage.Store = test.storage
 			request := httptest.NewRequest(http.MethodGet, test.requestURL, nil)
 			router := chi.NewRouter()
@@ -143,6 +147,7 @@ func TestCreateShortURLJSONHandler(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			config.ServiceConfig = config.NewDefaultServiceConfig()
 			storage.Storage, _ = storage.NewURLStorage("")
 			request := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(test.requestBody))
 			router := chi.NewRouter()
