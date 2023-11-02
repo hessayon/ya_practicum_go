@@ -15,9 +15,10 @@ type serviceConfig struct {
 	Filename string
 }
 
-var ServiceConfig serviceConfig
+var ServiceConfig *serviceConfig
 
-func InitServiceConfig() error {
+func NewServiceConfig() (*serviceConfig, error) {
+
 	var serviceAddr, baseAddr, filename string
 	flag.StringVar(&serviceAddr, "a", ":8080", "address and port to run server")
 	flag.StringVar(&baseAddr, "b", "http://localhost:8080", "base address of result shortened URL")
@@ -28,22 +29,28 @@ func InitServiceConfig() error {
 	}
 	splittedAddr := strings.Split(serviceAddr, ":")
 	if len(splittedAddr) != 2 {
-		return errors.New("wrong format for flag -a")
+		return nil, errors.New("wrong format for flag -a")
 	}
-	ServiceConfig.Host = splittedAddr[0]
-	var err error
-	ServiceConfig.Port, err = strconv.Atoi(splittedAddr[1])
+	host := splittedAddr[0]
+	port, err := strconv.Atoi(splittedAddr[1])
 	if err != nil {
-		return err
+		return nil, err
 	}
+
 	if envBaseAddr := os.Getenv("BASE_URL"); envBaseAddr != "" {
 		baseAddr = envBaseAddr
 	}
-	ServiceConfig.BaseAddr = baseAddr
-	if envFilename := os.Getenv("FILE_STORAGE_PATH"); envFilename != ""{
+
+	if envFilename := os.Getenv("FILE_STORAGE_PATH"); envFilename != "" {
 		filename = envFilename
 	}
-	ServiceConfig.Filename = filename
-	return nil
+
+
+	return &serviceConfig{
+		Host: host,
+		Port: port,
+		BaseAddr: baseAddr,
+		Filename: filename,
+	} , nil
 
 }

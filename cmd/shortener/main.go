@@ -13,9 +13,11 @@ import (
 )
 
 func main() {
-	err := config.InitServiceConfig()
+
+	var err error
+	config.ServiceConfig, err = config.NewServiceConfig()
 	if err != nil {
-		log.Fatalf("Error in InitServiceConfig: %s", err.Error())
+		log.Fatalf("Error in NewServiceConfig: %s", err.Error())
 	}
 	err = storage.InitURLStorage(config.ServiceConfig.Filename)
 	if err != nil {
@@ -28,13 +30,13 @@ func main() {
 	}
 	defer storage.StorageSaver.Close()
 
-	router.InitServiceRouter()
-
-	err = logger.InitServiceLogger("INFO")
+	logger.Log, err = logger.NewServiceLogger("INFO")
 	if err != nil {
-		log.Fatalf("Error in InitServiceLogger: %s", err.Error())
+		log.Fatalf("Error in NewServiceLogger: %s", err.Error())
 	}
 
+	serviceRouter := router.NewServiceRouter(logger.Log)
+
 	logger.Log.Info("Start URL Shortener service", zap.String("host", config.ServiceConfig.Host), zap.Int("port", config.ServiceConfig.Port))
-	log.Fatal(http.ListenAndServe(fmt.Sprintf("%s:%d", config.ServiceConfig.Host, config.ServiceConfig.Port), router.Router))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf("%s:%d", config.ServiceConfig.Host, config.ServiceConfig.Port), serviceRouter))
 }
