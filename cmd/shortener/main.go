@@ -19,16 +19,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error in NewServiceConfig: %s", err.Error())
 	}
-	err = storage.InitURLStorage(config.ServiceConfig.Filename)
+	storage.Storage, err = storage.NewURLStorage(config.ServiceConfig.Filename)
 	if err != nil {
-		log.Fatalf("Error in InitURLStorage: %s", err.Error())
+		log.Fatalf("Error in NewURLStorage: %s", err.Error())
 	}
 
-	err = storage.InitStorageSaver(config.ServiceConfig.Filename)
-	if err != nil {
-		log.Fatalf("Error in InitStorageSaver: %s", err.Error())
-	}
-	defer storage.StorageSaver.Close()
+	defer storage.Storage.Close()
 
 	logger.Log, err = logger.NewServiceLogger("INFO")
 	if err != nil {

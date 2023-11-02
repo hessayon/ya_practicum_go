@@ -34,7 +34,7 @@ func TestCreateShortURLHandler(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			storage.URLs = map[string]string{}
+			storage.Storage, _ = storage.NewURLStorage("")
 			request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(test.requestBody))
 			router := chi.NewRouter()
 			router.Get("/{id}", DecodeShortURL)
@@ -96,7 +96,7 @@ func TestDecodeShortURLHandler(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			storage.URLs = test.storage
+			storage.Storage.Store = test.storage
 			request := httptest.NewRequest(http.MethodGet, test.requestURL, nil)
 			router := chi.NewRouter()
 			router.Get("/{id}", DecodeShortURL)
@@ -143,7 +143,7 @@ func TestCreateShortURLJSONHandler(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			storage.URLs = map[string]string{}
+			storage.Storage, _ = storage.NewURLStorage("")
 			request := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(test.requestBody))
 			router := chi.NewRouter()
 			router.Get("/{id}", DecodeShortURL)

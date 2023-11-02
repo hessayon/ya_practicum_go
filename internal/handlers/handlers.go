@@ -43,17 +43,15 @@ func CreateShortURL(w http.ResponseWriter, r *http.Request) {
 	urlToShort := string(body)
 	shortenedURL := getShortURL(urlToShort)
 
-	storage.URLs[shortenedURL] = urlToShort
-	if(storage.StorageSaver != nil){
-		err := storage.StorageSaver.Save(&storage.URLData{
-			UUID: r.RequestURI,
-			ShortURL: shortenedURL,
-			OriginalURL: urlToShort,
-		})
-		if err != nil {
-			logger.Log.Error("Error in StorageSaver.Save()", zap.String("error", err.Error()))
-		}
+	err = storage.Storage.Save(&storage.URLData{
+		UUID: r.RequestURI,
+		ShortURL: shortenedURL,
+		OriginalURL: urlToShort,
+	})
+	if err != nil {
+		logger.Log.Error("Error in storage.Storage.Save()", zap.String("error", err.Error()))
 	}
+	
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte(fmt.Sprintf("%s/%s", config.ServiceConfig.BaseAddr, shortenedURL)))
@@ -62,7 +60,7 @@ func CreateShortURL(w http.ResponseWriter, r *http.Request) {
 func DecodeShortURL(w http.ResponseWriter, r *http.Request) {
 
 	shortenedURL := chi.URLParam(r, "id")
-	originalURL, found := storage.URLs[shortenedURL]
+	originalURL, found := storage.Storage.Get(shortenedURL)
 	if !found {
 		http.Error(w, "shortened url not found", http.StatusBadRequest)
 		return
@@ -82,17 +80,16 @@ func CreateShortURLJSON(w http.ResponseWriter, r *http.Request) {
 	}
 
 	shortenedURL := getShortURL(reqBody.URL)
-	storage.URLs[shortenedURL] = reqBody.URL
-	if(storage.StorageSaver != nil){
-		err := storage.StorageSaver.Save(&storage.URLData{
+
+	err = storage.Storage.Save(&storage.URLData{
 			UUID: r.RequestURI,
 			ShortURL: shortenedURL,
 			OriginalURL: reqBody.URL,
 		})
-		if err != nil {
-			logger.Log.Error("Error in StorageSaver.Save()", zap.String("error", err.Error()))
-		}
+	if err != nil {
+		logger.Log.Error("Error in storage.Storage.Save()", zap.String("error", err.Error()))
 	}
+	
 	respBody := responseBody{
 		ShortenURL: fmt.Sprintf("%s/%s", config.ServiceConfig.BaseAddr, shortenedURL),
 	}
