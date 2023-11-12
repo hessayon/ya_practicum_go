@@ -2,11 +2,35 @@ package middleware
 import (
 	"net/http"
 	"time"
-	"github.com/hessayon/ya_practicum_go/internal/logger"
 	"github.com/hessayon/ya_practicum_go/internal/compressing"
 	"go.uber.org/zap"
 )
 
+type (
+	ResponseData struct {
+		Status int
+		Size   int
+	}
+
+	// добавляем реализацию http.ResponseWriter
+	LoggingResponseWriter struct {
+		http.ResponseWriter // встраиваем оригинальный http.ResponseWriter
+		ResponseData        *ResponseData
+	}
+)
+
+func (r *LoggingResponseWriter) Write(b []byte) (int, error) {
+	// записываем ответ, используя оригинальный http.ResponseWriter
+	size, err := r.ResponseWriter.Write(b)
+	r.ResponseData.Size += size // захватываем размер
+	return size, err
+}
+
+func (r *LoggingResponseWriter) WriteHeader(statusCode int) {
+	// записываем код статуса, используя оригинальный http.ResponseWriter
+	r.ResponseWriter.WriteHeader(statusCode)
+	r.ResponseData.Status = statusCode // захватываем код статуса
+}
 
 
 func GzipCompress(h http.HandlerFunc) http.HandlerFunc {
@@ -45,11 +69,11 @@ func GzipCompress(h http.HandlerFunc) http.HandlerFunc {
 func RequestLogger(log *zap.Logger, h http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		responseData := &logger.ResponseData{
+		responseData := &ResponseData{
 			Status: 0,
 			Size:   0,
 		}
-		lw := logger.LoggingResponseWriter{
+		lw := LoggingResponseWriter{
 			ResponseWriter: w,
 			ResponseData:   responseData,
 		}
