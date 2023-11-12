@@ -19,19 +19,19 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error in NewServiceConfig: %s", err.Error())
 	}
-	storage.Storage, err = storage.NewURLStorage(config.ServiceConfig.Filename)
+	urlStorage, err := storage.NewURLStorage(config.ServiceConfig.Filename)
 	if err != nil {
 		log.Fatalf("Error in NewURLStorage: %s", err.Error())
 	}
 
-	defer storage.Storage.Close()
+	defer urlStorage.Close()
 
 	logger.Log, err = logger.NewServiceLogger("INFO")
 	if err != nil {
 		log.Fatalf("Error in NewServiceLogger: %s", err.Error())
 	}
 
-	serviceRouter := router.NewServiceRouter(logger.Log)
+	serviceRouter := router.NewServiceRouter(logger.Log, urlStorage)
 
 	logger.Log.Info("Start URL Shortener service", zap.String("host", config.ServiceConfig.Host), zap.Int("port", config.ServiceConfig.Port))
 	log.Fatal(http.ListenAndServe(fmt.Sprintf("%s:%d", config.ServiceConfig.Host, config.ServiceConfig.Port), serviceRouter))

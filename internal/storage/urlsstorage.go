@@ -30,8 +30,6 @@ type LocalURLStorage struct {
 	saver    *URLStorageFileSaver
 }
 
-var Storage URLStorage
-
 
 func newStorageSaver(filename string) (*URLStorageFileSaver, error) {
 

@@ -7,8 +7,9 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/golang/mock/gomock"
 	"github.com/hessayon/ya_practicum_go/internal/config"
-	"github.com/hessayon/ya_practicum_go/internal/storage"
+	"github.com/hessayon/ya_practicum_go/internal/mocks"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -36,11 +37,16 @@ func TestCreateShortURLHandler(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			config.ServiceConfig = config.NewDefaultServiceConfig()
-			storage.Storage, _ = storage.NewURLStorage("")
+
+			ctrl := gomock.NewController(t)
+   		defer ctrl.Finish()
+
+			m := mocks.NewMockURLStorage(ctrl)
+			m.EXPECT().Save(gomock.Any()).AnyTimes()
 			request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(test.requestBody))
 			router := chi.NewRouter()
-			router.Get("/{id}", DecodeShortURL)
-			router.Post("/", CreateShortURL)
+			router.Get("/{id}", DecodeShortURL(m))
+			router.Post("/", CreateShortURL(m))
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, request)
 			res := w.Result()
@@ -58,15 +64,19 @@ func TestDecodeShortURLHandler(t *testing.T) {
 	}
 	tests := []struct {
 		name       string
-		storage    map[string]string
+		correctReq bool
+		getCallKey string
+		getCallValue string
+		getCallStatus bool
 		requestURL string
 		want       want
 	}{
 		{
 			name: "positive test#1",
-			storage: map[string]string{
-				"EwHXdJfB": "https://practicum.yandex.ru/",
-			},
+			correctReq: true,
+			getCallKey: "EwHXdJfB",
+			getCallValue: "https://practicum.yandex.ru/",
+			getCallStatus: true,
 			requestURL: "/EwHXdJfB",
 			want: want{
 				code:                307,
@@ -75,9 +85,10 @@ func TestDecodeShortURLHandler(t *testing.T) {
 		},
 		{
 			name: "negative test#1",
-			storage: map[string]string{
-				"EwHXdJfB": "https://practicum.yandex.ru/",
-			},
+			correctReq: true,
+			getCallKey: "yhfjOHdb",
+			getCallValue: "",
+			getCallStatus: false,
 			requestURL: "/yhfjOHdb",
 			want: want{
 				code:                400,
@@ -86,9 +97,7 @@ func TestDecodeShortURLHandler(t *testing.T) {
 		},
 		{
 			name: "negative test#2",
-			storage: map[string]string{
-				"EwHXdJfB": "https://practicum.yandex.ru/",
-			},
+			correctReq: false,
 			requestURL: "/EwHXdJfB/yhfjOHdb",
 			want: want{
 				code:                404,
@@ -99,12 +108,19 @@ func TestDecodeShortURLHandler(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			config.ServiceConfig = config.NewDefaultServiceConfig()
-			storage.Storage, _ = storage.NewURLStorage("")
-			storage.Storage.Store = test.storage
+		
+			ctrl := gomock.NewController(t)
+   		defer ctrl.Finish()
+			m := mocks.NewMockURLStorage(ctrl)
+			if test.correctReq {
+				
+				m.EXPECT().Get(test.getCallKey).Return(test.getCallValue, test.getCallStatus)
+			}
+
 			request := httptest.NewRequest(http.MethodGet, test.requestURL, nil)
 			router := chi.NewRouter()
-			router.Get("/{id}", DecodeShortURL)
-			router.Post("/", CreateShortURL)
+			router.Get("/{id}", DecodeShortURL(m))
+			router.Post("/", CreateShortURL(m))
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, request)
 			res := w.Result()
@@ -148,12 +164,15 @@ func TestCreateShortURLJSONHandler(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			config.ServiceConfig = config.NewDefaultServiceConfig()
-			storage.Storage, _ = storage.NewURLStorage("")
+			ctrl := gomock.NewController(t)
+   		defer ctrl.Finish()
+			m := mocks.NewMockURLStorage(ctrl)
+			m.EXPECT().Save(gomock.Any()).AnyTimes()
 			request := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(test.requestBody))
 			router := chi.NewRouter()
-			router.Get("/{id}", DecodeShortURL)
-			router.Post("/", CreateShortURL)
-			router.Post("/api/shorten", CreateShortURLJSON)
+			router.Get("/{id}", DecodeShortURL(m))
+			router.Post("/", CreateShortURL(m))
+			router.Post("/api/shorten", CreateShortURLJSON(m))
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, request)
 			res := w.Result()
