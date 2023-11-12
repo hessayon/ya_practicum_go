@@ -47,8 +47,8 @@ func NewServiceConfig() (*serviceConfig, error) {
 		filename = envFilename
 	}
 
-	if envDbDSN := os.Getenv("DATABASE_DSN"); envDbDSN != "" {
-		dbDSN = envDbDSN
+	if envDBDSN := os.Getenv("DATABASE_DSN"); envDBDSN != "" {
+		dbDSN = envDBDSN
 	}
 
 
