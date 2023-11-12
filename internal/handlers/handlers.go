@@ -7,7 +7,9 @@ import (
 	"math/rand"
 	"net/http"
 	"time"
-
+	"database/sql"
+	
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/go-chi/chi/v5"
 	"github.com/hessayon/ya_practicum_go/internal/config"
 	"github.com/hessayon/ya_practicum_go/internal/logger"
@@ -101,4 +103,20 @@ func CreateShortURLJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "service internal error", http.StatusBadRequest)
 		return
 	}
+}
+
+
+func Ping(w http.ResponseWriter, r *http.Request) {
+	db, err := sql.Open("pgx", config.ServiceConfig.DBDsn)
+	if err != nil {
+		logger.Log.Error("error in db.Open()", zap.String("db_dsn", config.ServiceConfig.DBDsn), zap.String("error", err.Error()))
+		http.Error(w, "db is not connected", http.StatusInternalServerError)
+	}
+	defer db.Close()
+	err = db.Ping()
+	if err != nil {
+		logger.Log.Error("error in db.Ping()", zap.String("db_dsn", config.ServiceConfig.DBDsn), zap.String("error", err.Error()))
+		http.Error(w, "db is not connected", http.StatusInternalServerError)
+	}
+	w.WriteHeader(http.StatusOK)
 }

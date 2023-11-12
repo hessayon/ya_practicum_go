@@ -13,16 +13,18 @@ type serviceConfig struct {
 	Port     int
 	BaseAddr string
 	Filename string
+	DBDsn string
 }
 
 var ServiceConfig *serviceConfig
 
 func NewServiceConfig() (*serviceConfig, error) {
 
-	var serviceAddr, baseAddr, filename string
+	var serviceAddr, baseAddr, filename, dbDSN string
 	flag.StringVar(&serviceAddr, "a", ":8080", "address and port to run server")
 	flag.StringVar(&baseAddr, "b", "http://localhost:8080", "base address of result shortened URL")
 	flag.StringVar(&filename, "f", "", "filename of url storage")
+	flag.StringVar(&dbDSN, "d", "", "database connection string")
 	flag.Parse()
 	if envServiceAddr := os.Getenv("SERVER_ADDRESS"); envServiceAddr != "" {
 		serviceAddr = envServiceAddr
@@ -45,12 +47,17 @@ func NewServiceConfig() (*serviceConfig, error) {
 		filename = envFilename
 	}
 
+	if envDbDSN := os.Getenv("DATABASE_DSN"); envDbDSN != "" {
+		dbDSN = envDbDSN
+	}
+
 
 	return &serviceConfig{
 		Host: host,
 		Port: port,
 		BaseAddr: baseAddr,
 		Filename: filename,
+		DBDsn: dbDSN,
 	} , nil
 
 }

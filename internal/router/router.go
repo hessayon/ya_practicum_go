@@ -14,5 +14,6 @@ func NewServiceRouter(log *zap.Logger) *chi.Mux {
 	newRouter.Post("/", middleware.RequestLogger(log, middleware.GzipCompress(handlers.CreateShortURL)))
 	newRouter.Get("/{id}", middleware.RequestLogger(log, middleware.GzipCompress(handlers.DecodeShortURL)))
 	newRouter.Post("/api/shorten", middleware.RequestLogger(log, middleware.GzipCompress(handlers.CreateShortURLJSON)))
+	newRouter.Get("/ping", middleware.RequestLogger(log, middleware.GzipCompress(handlers.Ping)))
 	return newRouter
 }
