@@ -118,8 +118,27 @@ func (storage *URLDBStorage) Save(urlData *URLData) error {
 	return nil
 }
 
+
 func (storage *URLDBStorage) SaveBatch(urlsBatch []*URLData) error {
-	return nil
+	query := "INSERT INTO urls VALUES ($1, $2);"
+	tx, err := storage.DB.Begin()
+	if err != nil {
+			return err
+	}
+	defer tx.Rollback()
+	ctx := context.Background()
+	stmt, err := tx.PrepareContext(ctx, query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	for _, data := range urlsBatch {
+		_, err := stmt.ExecContext(ctx, data.ShortURL, data.OriginalURL)
+		if err != nil {
+				return err
+		}
+	}
+	return tx.Commit()
 }
 
 
