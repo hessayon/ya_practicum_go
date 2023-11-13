@@ -2,7 +2,10 @@ package storage
 
 import (
 	"bufio"
+	"context"
+	"database/sql"
 	"encoding/json"
+	"log"
 	"os"
 )
 
@@ -18,6 +21,7 @@ type URLData struct {
 	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
 }
+//--------------------------------------------------------------------
 
 type URLStorageFileSaver struct {
 	file    *os.File
@@ -29,7 +33,11 @@ type LocalURLStorage struct {
 	filename string
 	saver    *URLStorageFileSaver
 }
+//--------------------------------------------------------------------
 
+type URLDBStorage struct {
+	DB *sql.DB
+}
 
 func newStorageSaver(filename string) (*URLStorageFileSaver, error) {
 
@@ -69,6 +77,51 @@ func (storage *LocalURLStorage) Close() {
 }
 
 
+func (storage *URLDBStorage) Save(urlData *URLData) error {
+	query := "INSERT INTO urls VALUES ($1, $2);"
+	_, err := storage.DB.ExecContext(context.Background(), query, urlData.ShortURL, urlData.OriginalURL)
+	if err != nil{
+		return err
+	}
+	return nil
+}
+
+
+func (storage *URLDBStorage) Get(shortURL string) (string, bool) {
+	query := "SELECT full_url FROM urls WHERE short_url = $1 LIMIT 1"
+	row := storage.DB.QueryRowContext(context.Background(), query, shortURL)
+	var fullURL string
+	err := row.Scan(&fullURL)
+	if err != nil{
+		log.Printf("Error in Scan: %s", err.Error())
+		return "", false
+	}
+	return fullURL, true
+}
+
+
+func (storage *URLDBStorage) Close() {
+	storage.DB.Close()
+}
+
+func NewDBURLStorage(dsn string) (URLStorage, error) {
+	db, err := sql.Open("pgx", dsn)
+	if err != nil {
+		return nil, err
+	}
+
+	err = db.Ping()
+	if err != nil {
+		return nil, err
+	}
+
+	return &URLDBStorage{
+		DB: db,
+	}, nil
+}
+
+
+
 func NewURLStorage(filename string) (URLStorage, error) {
 
 	storage := &LocalURLStorage{
@@ -76,7 +129,7 @@ func NewURLStorage(filename string) (URLStorage, error) {
 		filename: filename,
 		saver: nil,
 	}
-
+	
 	if filename == "" {
 		// значит опция сохранения в файл отключена
 		return storage, nil

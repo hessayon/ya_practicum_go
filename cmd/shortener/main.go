@@ -19,10 +19,19 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error in NewServiceConfig: %s", err.Error())
 	}
-	urlStorage, err := storage.NewURLStorage(config.ServiceConfig.Filename)
-	if err != nil {
-		log.Fatalf("Error in NewURLStorage: %s", err.Error())
+	var urlStorage storage.URLStorage
+	if config.ServiceConfig.DBDsn != "" {
+		urlStorage, err = storage.NewDBURLStorage(config.ServiceConfig.DBDsn)
+		if err != nil {
+			log.Fatalf("Error in NewDBURLStorage: %s", err.Error())
+		}
+	} else {
+		urlStorage, err = storage.NewURLStorage(config.ServiceConfig.Filename)
+		if err != nil {
+			log.Fatalf("Error in NewURLStorage: %s", err.Error())
+		}
 	}
+	
 
 	defer urlStorage.Close()
 
