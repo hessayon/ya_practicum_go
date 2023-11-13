@@ -160,7 +160,7 @@ func CreateShortURLBatch(s storage.URLStorage) http.HandlerFunc {
 				OriginalURL: data.OriginalURL,
 			})
 			responseData = append(responseData, responseBatchBody{
-				CorrelationID: data.CorrelationID, ShortURL: shortenedURL,
+				CorrelationID: data.CorrelationID, ShortURL: fmt.Sprintf("%s/%s", config.ServiceConfig.BaseAddr, shortenedURL),
 			})
 		}
 		err = s.SaveBatch(urlsData)
