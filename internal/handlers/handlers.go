@@ -1,19 +1,19 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
 	"math/rand"
 	"net/http"
 	"time"
-	"database/sql"
-	
-	_ "github.com/jackc/pgx/v5/stdlib"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/hessayon/ya_practicum_go/internal/config"
 	"github.com/hessayon/ya_practicum_go/internal/logger"
 	"github.com/hessayon/ya_practicum_go/internal/storage"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"go.uber.org/zap"
 )
 
@@ -23,6 +23,16 @@ type requestBody struct{
 
 type responseBody struct{
 	ShortenURL string `json:"result"`
+}
+
+type requestBatchBody struct {
+	CorrelationID string `json:"correlation_id"`
+	OriginalURL string `json:"original_url"`
+}
+
+type responseBatchBody struct {
+	CorrelationID string `json:"correlation_id"`
+	ShortURL string `json:"short_url"`
 }
 
 func getShortURL(url string) string {
@@ -125,4 +135,44 @@ func Ping(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "db is not connected", http.StatusInternalServerError)
 	}
 	w.WriteHeader(http.StatusOK)
+}
+
+
+func CreateShortURLBatch(s storage.URLStorage) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var reqBody []requestBatchBody
+		err := json.NewDecoder(r.Body).Decode(&reqBody)
+		if err != nil {
+			http.Error(w, "error in decoding of request's body", http.StatusBadRequest)
+			return
+		}
+		if len(reqBody) == 0 {
+			w.WriteHeader(http.StatusCreated)
+			return
+		}
+		urlsData := make([]*storage.URLData, 0, len(reqBody))
+		responseData := make([]responseBatchBody, 0, len(reqBody))
+		for _, data := range reqBody {
+			shortenedURL := getShortURL(data.OriginalURL)
+			urlsData = append(urlsData, &storage.URLData{
+				UUID: r.RequestURI,
+				ShortURL: shortenedURL,
+				OriginalURL: data.OriginalURL,
+			})
+			responseData = append(responseData, responseBatchBody{
+				CorrelationID: data.CorrelationID, ShortURL: shortenedURL,
+			})
+		}
+		err = s.SaveBatch(urlsData)
+		if err != nil {
+			logger.Log.Error("Error in s.SaveBatch()", zap.String("error", err.Error()))
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		if err := json.NewEncoder(w).Encode(responseData); err != nil{
+			logger.Log.Error("error in encoding response body")
+			http.Error(w, "service internal error", http.StatusBadRequest)
+			return
+		}
+	})
 }
