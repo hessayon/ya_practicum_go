@@ -11,6 +11,7 @@ import (
 
 type URLStorage interface {
 	Save(urlData *URLData) (err error)
+	SaveBatch(urlsBatch []*URLData) (err error) 
 	Get(shortURL string) (value string, ok bool)
 	Close()
 
@@ -65,6 +66,16 @@ func (storage *LocalURLStorage) Save(urlData *URLData) error {
 	return nil
 }
 
+func (storage *LocalURLStorage) SaveBatch(urlsBatch []*URLData) error {
+	for _, data := range urlsBatch {
+		err := storage.Save(data)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 
 func (storage *LocalURLStorage) Get(shortURL string) (string, bool) {
  	fullURL, found := storage.Store[shortURL]
@@ -104,6 +115,10 @@ func (storage *URLDBStorage) Save(urlData *URLData) error {
 		_, err := storage.DB.ExecContext(context.Background(), query, urlData.ShortURL, urlData.OriginalURL)
 		return err
 	}
+	return nil
+}
+
+func (storage *URLDBStorage) SaveBatch(urlsBatch []*URLData) error {
 	return nil
 }
 
