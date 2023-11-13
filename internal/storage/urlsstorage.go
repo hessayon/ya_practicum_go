@@ -132,10 +132,19 @@ func (storage *URLDBStorage) SaveBatch(urlsBatch []*URLData) error {
 		return err
 	}
 	defer stmt.Close()
-	for _, data := range urlsBatch {
+	for i, data := range urlsBatch {
 		_, err := stmt.ExecContext(ctx, data.ShortURL, data.OriginalURL)
 		if err != nil {
+			// если первая попытка сохранить, то пробуем создать таблицу
+			if i == 0 {
+				err = storage.createTable()
+				if err != nil {
+					return err
+				}
+			} else {
 				return err
+			}
+			
 		}
 	}
 	return tx.Commit()
