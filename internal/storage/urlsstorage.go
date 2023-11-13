@@ -38,6 +38,8 @@ type LocalURLStorage struct {
 type URLDBStorage struct {
 	DB *sql.DB
 }
+//--------------------------------------------------------------------
+
 
 func newStorageSaver(filename string) (*URLStorageFileSaver, error) {
 
@@ -75,12 +77,31 @@ func (storage *LocalURLStorage) Close() {
 		storage.saver.file.Close()
 	}
 }
+//--------------------------------------------------------------------
+
+
+func (storage *URLDBStorage) createTable() error {
+	query := `
+	CREATE TABLE urls (
+		short_url varchar NOT NULL,
+		full_url varchar NOT NULL,
+		CONSTRAINT urls_pk PRIMARY KEY (short_url)
+	);`
+	_, err := storage.DB.ExecContext(context.Background(), query)
+	return err
+}
 
 
 func (storage *URLDBStorage) Save(urlData *URLData) error {
 	query := "INSERT INTO urls VALUES ($1, $2);"
 	_, err := storage.DB.ExecContext(context.Background(), query, urlData.ShortURL, urlData.OriginalURL)
-	if err != nil{
+	if err != nil {
+		err = storage.createTable()
+		
+		if err != nil {
+			return err
+		}
+		_, err := storage.DB.ExecContext(context.Background(), query, urlData.ShortURL, urlData.OriginalURL)
 		return err
 	}
 	return nil
