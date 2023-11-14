@@ -8,17 +8,17 @@ import (
 	"strings"
 )
 
-type serviceConfig struct {
+type ServiceConfig struct {
 	Host     string
 	Port     int
 	BaseAddr string
 	Filename string
-	DBDsn string
+	DBDsn    string
 }
 
-var ServiceConfig *serviceConfig
+var Config *ServiceConfig
 
-func NewServiceConfig() (*serviceConfig, error) {
+func NewServiceConfig() (*ServiceConfig, error) {
 
 	var serviceAddr, baseAddr, filename, dbDSN string
 	flag.StringVar(&serviceAddr, "a", ":8080", "address and port to run server")
@@ -51,23 +51,20 @@ func NewServiceConfig() (*serviceConfig, error) {
 		dbDSN = envDBDSN
 	}
 
-
-	return &serviceConfig{
-		Host: host,
-		Port: port,
+	return &ServiceConfig{
+		Host:     host,
+		Port:     port,
 		BaseAddr: baseAddr,
 		Filename: filename,
-		DBDsn: dbDSN,
-	} , nil
+		DBDsn:    dbDSN,
+	}, nil
 
 }
 
-
-
-func NewDefaultServiceConfig() *serviceConfig {
-	return &serviceConfig{
-		Host: "",
-		Port: 8080,
+func NewDefaultServiceConfig() *ServiceConfig {
+	return &ServiceConfig{
+		Host:     "",
+		Port:     8080,
 		BaseAddr: "http://localhost:8080",
 		Filename: "",
 	}

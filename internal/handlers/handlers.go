@@ -3,12 +3,12 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
 	"net/http"
 	"time"
-	"errors"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/hessayon/ya_practicum_go/internal/config"
@@ -18,22 +18,22 @@ import (
 	"go.uber.org/zap"
 )
 
-type requestBody struct{
+type requestBody struct {
 	URL string `json:"url"`
 }
 
-type responseBody struct{
+type responseBody struct {
 	ShortenURL string `json:"result"`
 }
 
 type requestBatchBody struct {
 	CorrelationID string `json:"correlation_id"`
-	OriginalURL string `json:"original_url"`
+	OriginalURL   string `json:"original_url"`
 }
 
 type responseBatchBody struct {
 	CorrelationID string `json:"correlation_id"`
-	ShortURL string `json:"short_url"`
+	ShortURL      string `json:"short_url"`
 }
 
 func getShortURL(url string) string {
@@ -59,8 +59,8 @@ func CreateShortURL(s storage.URLStorage) http.HandlerFunc {
 		shortenedURL := getShortURL(urlToShort)
 
 		err = s.Save(&storage.URLData{
-			UUID: r.RequestURI,
-			ShortURL: shortenedURL,
+			UUID:        r.RequestURI,
+			ShortURL:    shortenedURL,
 			OriginalURL: urlToShort,
 		})
 		statusCode := http.StatusCreated
@@ -80,7 +80,7 @@ func CreateShortURL(s storage.URLStorage) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(statusCode)
-		w.Write([]byte(fmt.Sprintf("%s/%s", config.ServiceConfig.BaseAddr, shortenedURL)))
+		w.Write([]byte(fmt.Sprintf("%s/%s", config.Config.BaseAddr, shortenedURL)))
 	})
 }
 
@@ -97,8 +97,6 @@ func DecodeShortURL(s storage.URLStorage) http.HandlerFunc {
 	})
 }
 
-
-
 func CreateShortURLJSON(s storage.URLStorage) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var reqBody requestBody
@@ -111,10 +109,10 @@ func CreateShortURLJSON(s storage.URLStorage) http.HandlerFunc {
 		shortenedURL := getShortURL(reqBody.URL)
 
 		err = s.Save(&storage.URLData{
-				UUID: r.RequestURI,
-				ShortURL: shortenedURL,
-				OriginalURL: reqBody.URL,
-			})
+			UUID:        r.RequestURI,
+			ShortURL:    shortenedURL,
+			OriginalURL: reqBody.URL,
+		})
 		statusCode := http.StatusCreated
 		if err != nil {
 			if errors.Is(err, storage.ErrConflict) {
@@ -129,37 +127,35 @@ func CreateShortURLJSON(s storage.URLStorage) http.HandlerFunc {
 				logger.Log.Error("Error in s.Save()", zap.String("error", err.Error()))
 			}
 		}
-		
+
 		respBody := responseBody{
-			ShortenURL: fmt.Sprintf("%s/%s", config.ServiceConfig.BaseAddr, shortenedURL),
+			ShortenURL: fmt.Sprintf("%s/%s", config.Config.BaseAddr, shortenedURL),
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		if err := json.NewEncoder(w).Encode(respBody); err != nil{
-			logger.Log.Error("error in encoding response body", zap.String("originalURL", reqBody.URL) ,zap.String("shortenURL", respBody.ShortenURL))
+		if err := json.NewEncoder(w).Encode(respBody); err != nil {
+			logger.Log.Error("error in encoding response body", zap.String("originalURL", reqBody.URL), zap.String("shortenURL", respBody.ShortenURL))
 			http.Error(w, "service internal error", http.StatusBadRequest)
 			return
 		}
 	})
 }
 
-
 func Ping(w http.ResponseWriter, r *http.Request) {
-	db, err := sql.Open("pgx", config.ServiceConfig.DBDsn)
+	db, err := sql.Open("pgx", config.Config.DBDsn)
 	if err != nil {
-		logger.Log.Error("error in db.Open()", zap.String("db_dsn", config.ServiceConfig.DBDsn), zap.String("error", err.Error()))
+		logger.Log.Error("error in db.Open()", zap.String("db_dsn", config.Config.DBDsn), zap.String("error", err.Error()))
 		http.Error(w, "db is not connected", http.StatusInternalServerError)
 	}
 	defer db.Close()
 	err = db.Ping()
 	if err != nil {
-		logger.Log.Error("error in db.Ping()", zap.String("db_dsn", config.ServiceConfig.DBDsn), zap.String("error", err.Error()))
+		logger.Log.Error("error in db.Ping()", zap.String("db_dsn", config.Config.DBDsn), zap.String("error", err.Error()))
 		http.Error(w, "db is not connected", http.StatusInternalServerError)
 	}
 	w.WriteHeader(http.StatusOK)
 }
-
 
 func CreateShortURLBatch(s storage.URLStorage) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -178,12 +174,12 @@ func CreateShortURLBatch(s storage.URLStorage) http.HandlerFunc {
 		for _, data := range reqBody {
 			shortenedURL := getShortURL(data.OriginalURL)
 			urlsData = append(urlsData, &storage.URLData{
-				UUID: r.RequestURI,
-				ShortURL: shortenedURL,
+				UUID:        r.RequestURI,
+				ShortURL:    shortenedURL,
 				OriginalURL: data.OriginalURL,
 			})
 			responseData = append(responseData, responseBatchBody{
-				CorrelationID: data.CorrelationID, ShortURL: fmt.Sprintf("%s/%s", config.ServiceConfig.BaseAddr, shortenedURL),
+				CorrelationID: data.CorrelationID, ShortURL: fmt.Sprintf("%s/%s", config.Config.BaseAddr, shortenedURL),
 			})
 		}
 		err = s.SaveBatch(urlsData)
@@ -192,7 +188,7 @@ func CreateShortURLBatch(s storage.URLStorage) http.HandlerFunc {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		if err := json.NewEncoder(w).Encode(responseData); err != nil{
+		if err := json.NewEncoder(w).Encode(responseData); err != nil {
 			logger.Log.Error("error in encoding response body")
 			http.Error(w, "service internal error", http.StatusBadRequest)
 			return

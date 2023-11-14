@@ -36,10 +36,10 @@ func TestCreateShortURLHandler(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			config.ServiceConfig = config.NewDefaultServiceConfig()
+			config.Config = config.NewDefaultServiceConfig()
 
 			ctrl := gomock.NewController(t)
-   		defer ctrl.Finish()
+			defer ctrl.Finish()
 
 			m := mocks.NewMockURLStorage(ctrl)
 			m.EXPECT().Save(gomock.Any()).AnyTimes()
@@ -63,40 +63,40 @@ func TestDecodeShortURLHandler(t *testing.T) {
 		locationHeaderValue string
 	}
 	tests := []struct {
-		name       string
-		correctReq bool
-		getCallKey string
-		getCallValue string
+		name          string
+		correctReq    bool
+		getCallKey    string
+		getCallValue  string
 		getCallStatus bool
-		requestURL string
-		want       want
+		requestURL    string
+		want          want
 	}{
 		{
-			name: "positive test#1",
-			correctReq: true,
-			getCallKey: "EwHXdJfB",
-			getCallValue: "https://practicum.yandex.ru/",
+			name:          "positive test#1",
+			correctReq:    true,
+			getCallKey:    "EwHXdJfB",
+			getCallValue:  "https://practicum.yandex.ru/",
 			getCallStatus: true,
-			requestURL: "/EwHXdJfB",
+			requestURL:    "/EwHXdJfB",
 			want: want{
 				code:                307,
 				locationHeaderValue: "https://practicum.yandex.ru/",
 			},
 		},
 		{
-			name: "negative test#1",
-			correctReq: true,
-			getCallKey: "yhfjOHdb",
-			getCallValue: "",
+			name:          "negative test#1",
+			correctReq:    true,
+			getCallKey:    "yhfjOHdb",
+			getCallValue:  "",
 			getCallStatus: false,
-			requestURL: "/yhfjOHdb",
+			requestURL:    "/yhfjOHdb",
 			want: want{
 				code:                400,
 				locationHeaderValue: "",
 			},
 		},
 		{
-			name: "negative test#2",
+			name:       "negative test#2",
 			correctReq: false,
 			requestURL: "/EwHXdJfB/yhfjOHdb",
 			want: want{
@@ -107,13 +107,13 @@ func TestDecodeShortURLHandler(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			config.ServiceConfig = config.NewDefaultServiceConfig()
-		
+			config.Config = config.NewDefaultServiceConfig()
+
 			ctrl := gomock.NewController(t)
-   		defer ctrl.Finish()
+			defer ctrl.Finish()
 			m := mocks.NewMockURLStorage(ctrl)
 			if test.correctReq {
-				
+
 				m.EXPECT().GetOriginalURL(test.getCallKey).Return(test.getCallValue, test.getCallStatus)
 			}
 
@@ -130,7 +130,6 @@ func TestDecodeShortURLHandler(t *testing.T) {
 		})
 	}
 }
-
 
 func TestCreateShortURLJSONHandler(t *testing.T) {
 
@@ -163,9 +162,9 @@ func TestCreateShortURLJSONHandler(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			config.ServiceConfig = config.NewDefaultServiceConfig()
+			config.Config = config.NewDefaultServiceConfig()
 			ctrl := gomock.NewController(t)
-   		defer ctrl.Finish()
+			defer ctrl.Finish()
 			m := mocks.NewMockURLStorage(ctrl)
 			m.EXPECT().Save(gomock.Any()).AnyTimes()
 			request := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(test.requestBody))
