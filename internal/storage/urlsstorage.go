@@ -232,6 +232,7 @@ func NewURLStorage(filename string) (URLStorage, error) {
 
 	storage := &LocalURLStorage{
 		ShortToOrig:    make(map[string]string),
+		OrigToShort: make(map[string]string),
 		filename: filename,
 		saver: nil,
 	}
