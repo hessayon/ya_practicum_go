@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"net/http"
 	"time"
+	"errors"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/hessayon/ya_practicum_go/internal/config"
@@ -62,12 +63,23 @@ func CreateShortURL(s storage.URLStorage) http.HandlerFunc {
 			ShortURL: shortenedURL,
 			OriginalURL: urlToShort,
 		})
+		statusCode := http.StatusCreated
 		if err != nil {
-			logger.Log.Error("Error in s.Save()", zap.String("error", err.Error()))
+			if errors.Is(err, storage.ErrConflict) {
+				statusCode = http.StatusConflict
+				var found bool
+				shortenedURL, found = s.GetShortURL(urlToShort)
+				if !found {
+					http.Error(w, "shortened url not found", http.StatusBadRequest)
+					return
+				}
+			} else {
+				logger.Log.Error("Error in s.Save()", zap.String("error", err.Error()))
+			}
 		}
 
 		w.Header().Set("Content-Type", "text/plain")
-		w.WriteHeader(http.StatusCreated)
+		w.WriteHeader(statusCode)
 		w.Write([]byte(fmt.Sprintf("%s/%s", config.ServiceConfig.BaseAddr, shortenedURL)))
 	})
 }
@@ -75,7 +87,7 @@ func CreateShortURL(s storage.URLStorage) http.HandlerFunc {
 func DecodeShortURL(s storage.URLStorage) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		shortenedURL := chi.URLParam(r, "id")
-		originalURL, found := s.Get(shortenedURL)
+		originalURL, found := s.GetOriginalURL(shortenedURL)
 		if !found {
 			http.Error(w, "shortened url not found", http.StatusBadRequest)
 			return
@@ -103,8 +115,19 @@ func CreateShortURLJSON(s storage.URLStorage) http.HandlerFunc {
 				ShortURL: shortenedURL,
 				OriginalURL: reqBody.URL,
 			})
+		statusCode := http.StatusCreated
 		if err != nil {
-			logger.Log.Error("Error in s.Save()", zap.String("error", err.Error()))
+			if errors.Is(err, storage.ErrConflict) {
+				statusCode = http.StatusConflict
+				var found bool
+				shortenedURL, found = s.GetShortURL(reqBody.URL)
+				if !found {
+					http.Error(w, "shortened url not found", http.StatusBadRequest)
+					return
+				}
+			} else {
+				logger.Log.Error("Error in s.Save()", zap.String("error", err.Error()))
+			}
 		}
 		
 		respBody := responseBody{
@@ -112,7 +135,7 @@ func CreateShortURLJSON(s storage.URLStorage) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
+		w.WriteHeader(statusCode)
 		if err := json.NewEncoder(w).Encode(respBody); err != nil{
 			logger.Log.Error("error in encoding response body", zap.String("originalURL", reqBody.URL) ,zap.String("shortenURL", respBody.ShortenURL))
 			http.Error(w, "service internal error", http.StatusBadRequest)

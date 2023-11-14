@@ -114,7 +114,7 @@ func TestDecodeShortURLHandler(t *testing.T) {
 			m := mocks.NewMockURLStorage(ctrl)
 			if test.correctReq {
 				
-				m.EXPECT().Get(test.getCallKey).Return(test.getCallValue, test.getCallStatus)
+				m.EXPECT().GetOriginalURL(test.getCallKey).Return(test.getCallValue, test.getCallStatus)
 			}
 
 			request := httptest.NewRequest(http.MethodGet, test.requestURL, nil)
