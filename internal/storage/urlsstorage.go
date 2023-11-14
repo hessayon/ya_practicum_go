@@ -132,9 +132,6 @@ func (storage *URLDBStorage) Save(urlData *URLData) error {
 			if err != nil {
 				return err
 			}
-			if err != nil {
-				return err
-			}
 			_, err := storage.DB.ExecContext(context.Background(), query, urlData.ShortURL, urlData.OriginalURL)
 			return err
 		} else if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
