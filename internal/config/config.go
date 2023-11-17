@@ -8,21 +8,23 @@ import (
 	"strings"
 )
 
-type serviceConfig struct {
+type ServiceConfig struct {
 	Host     string
 	Port     int
 	BaseAddr string
 	Filename string
+	DBDsn    string
 }
 
-var ServiceConfig *serviceConfig
+var Config *ServiceConfig
 
-func NewServiceConfig() (*serviceConfig, error) {
+func NewServiceConfig() (*ServiceConfig, error) {
 
-	var serviceAddr, baseAddr, filename string
+	var serviceAddr, baseAddr, filename, dbDSN string
 	flag.StringVar(&serviceAddr, "a", ":8080", "address and port to run server")
 	flag.StringVar(&baseAddr, "b", "http://localhost:8080", "base address of result shortened URL")
 	flag.StringVar(&filename, "f", "", "filename of url storage")
+	flag.StringVar(&dbDSN, "d", "", "database connection string")
 	flag.Parse()
 	if envServiceAddr := os.Getenv("SERVER_ADDRESS"); envServiceAddr != "" {
 		serviceAddr = envServiceAddr
@@ -45,22 +47,24 @@ func NewServiceConfig() (*serviceConfig, error) {
 		filename = envFilename
 	}
 
+	if envDBDSN := os.Getenv("DATABASE_DSN"); envDBDSN != "" {
+		dbDSN = envDBDSN
+	}
 
-	return &serviceConfig{
-		Host: host,
-		Port: port,
+	return &ServiceConfig{
+		Host:     host,
+		Port:     port,
 		BaseAddr: baseAddr,
 		Filename: filename,
-	} , nil
+		DBDsn:    dbDSN,
+	}, nil
 
 }
 
-
-
-func NewDefaultServiceConfig() *serviceConfig {
-	return &serviceConfig{
-		Host: "",
-		Port: 8080,
+func NewDefaultServiceConfig() *ServiceConfig {
+	return &ServiceConfig{
+		Host:     "",
+		Port:     8080,
 		BaseAddr: "http://localhost:8080",
 		Filename: "",
 	}
