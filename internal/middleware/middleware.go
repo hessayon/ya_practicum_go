@@ -1,12 +1,14 @@
 package middleware
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/google/uuid"
 	"github.com/hessayon/ya_practicum_go/internal/compressing"
 	"go.uber.org/zap"
 )
@@ -110,6 +112,7 @@ func RequestLogger(log *zap.Logger, h http.HandlerFunc) http.HandlerFunc {
 }
 const SECRET_KEY = "supersecretkey"
 const TOKEN_EXP = time.Hour * 24
+const CONTEXT_KEY = "uuid"
 
 func BuildJWTString(userUUID string) (string, error) {
 	// создаём новый токен с алгоритмом подписи HS256 и утверждениями — Claims
@@ -151,11 +154,16 @@ func GetUserID(tokenString string) (string, error) {
 	return claims.UserID, nil  
 }
 
+
+type uuidKey struct{ }
+
 func AuthenticateUser(h http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie("UserToken")
+		var userID string
     if cookie == nil || err != nil{
-			jwtToken, err := BuildJWTString(r.RequestURI)
+			userID = uuid.Must(uuid.NewRandom()).String()
+			jwtToken, err := BuildJWTString(userID)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
@@ -170,7 +178,21 @@ func AuthenticateUser(h http.HandlerFunc) http.HandlerFunc {
         SameSite: http.SameSiteLaxMode,
     	}
 			http.SetCookie(w, &newCookie)
+		} else {
+			userID, err = GetUserID(cookie.Value)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
 		}
-		h(w, r)
+
+		h(w, r.WithContext(
+			context.WithValue(r.Context(), uuidKey{}, userID),
+		))
 	})
+}
+
+func UserIDFromContext(ctx context.Context) string {
+	userID, _ := ctx.Value(uuidKey{}).(string)
+	return userID
 }
