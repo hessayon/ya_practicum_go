@@ -116,23 +116,22 @@ func RequestLogger(log *zap.Logger, h http.HandlerFunc) http.HandlerFunc {
 		)
 	})
 }
-const SECRET_KEY = "9VAwVrKwAJNUYBySuhPVQWHnwkpuogGj"
-const TOKEN_EXP = time.Hour * 24
-const CONTEXT_KEY = "uuid"
+const secretKey = "9VAwVrKwAJNUYBySuhPVQWHnwkpuogGj"
+const tokenExp = time.Hour * 24
 
 func BuildJWTString(userUUID string) (string, error) {
 	// создаём новый токен с алгоритмом подписи HS256 и утверждениями — Claims
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims {
 			RegisteredClaims: jwt.RegisteredClaims{
 					// когда создан токен
-					ExpiresAt: jwt.NewNumericDate(time.Now().Add(TOKEN_EXP)),
+					ExpiresAt: jwt.NewNumericDate(time.Now().Add(tokenExp)),
 			},
 			// собственное утверждение
 			UserID: userUUID,
 	})
 
 	// создаём строку токена
-	tokenString, err := token.SignedString([]byte(SECRET_KEY))
+	tokenString, err := token.SignedString([]byte(secretKey))
 	if err != nil {
 			return "", err
 	}
@@ -181,7 +180,7 @@ func GetUserID(cookie *http.Cookie) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	decryptedCookie, err := GetDecryptedCookie(cookie.Name, cookieValue, []byte(SECRET_KEY))
+	decryptedCookie, err := GetDecryptedCookie(cookie.Name, cookieValue, []byte(secretKey))
 	if err != nil {
 		return "", err
 	}
@@ -192,7 +191,7 @@ func GetUserID(cookie *http.Cookie) (string, error) {
 			errMsg := fmt.Sprintf("unexpected signing method: %v", t.Header["alg"])
 			return nil, errors.New(errMsg)
 		}
-		return []byte(SECRET_KEY), nil
+		return []byte(secretKey), nil
 	})
 	if err != nil {
 			return "", err
@@ -249,7 +248,7 @@ func setUserTokenCookie(w http.ResponseWriter, userID string) error {
 		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
 	}
-	encryptedCookie, err := GetEncryptedCookie(newCookie, []byte(SECRET_KEY))
+	encryptedCookie, err := GetEncryptedCookie(newCookie, []byte(secretKey))
 	if err != nil {
 		return err
 	}
