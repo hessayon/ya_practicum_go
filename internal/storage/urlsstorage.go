@@ -137,7 +137,7 @@ func (storage *URLDBStorage) createTable() error {
 
 func (storage *URLDBStorage) Save(urlData *URLData) error {
 	query := "INSERT INTO urls VALUES ($1, $2, $3);"
-	_, err := storage.DB.ExecContext(context.Background(), query, urlData.ShortURL, urlData.OriginalURL)
+	_, err := storage.DB.ExecContext(context.Background(), query, urlData.ShortURL, urlData.OriginalURL, urlData.UUID)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		// если не найдена такая таблица, то пробуем создать таблицу
