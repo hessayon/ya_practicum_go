@@ -258,11 +258,15 @@ func setUserTokenCookie(w http.ResponseWriter, userID string) error {
 }
 
 
-func AuthenticateUser(h http.HandlerFunc) http.HandlerFunc {
+func AuthenticateUser(authRequired bool, h http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie("UserToken")
 		var userID string
-    if cookie == nil || err != nil{
+    if cookie == nil || err != nil {
+			if authRequired {
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
 			userID = uuid.Must(uuid.NewRandom()).String()
 			err = setUserTokenCookie(w, userID)
 			if err != nil {
@@ -273,6 +277,10 @@ func AuthenticateUser(h http.HandlerFunc) http.HandlerFunc {
 		} else {
 			userID, err = GetUserID(cookie)
 			if err != nil {
+				if authRequired {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
 				userID = uuid.Must(uuid.NewRandom()).String()
 				err = setUserTokenCookie(w, userID)
 				if err != nil {

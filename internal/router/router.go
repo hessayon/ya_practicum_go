@@ -12,10 +12,10 @@ import (
 
 func NewServiceRouter(log *zap.Logger, s storage.URLStorage) *chi.Mux {
 	newRouter := chi.NewRouter()
-	newRouter.Post("/", middleware.AuthenticateUser(middleware.RequestLogger(log, middleware.GzipCompress(handlers.CreateShortURL(s)))))
-	newRouter.Get("/{id}", middleware.AuthenticateUser(middleware.RequestLogger(log, middleware.GzipCompress(handlers.DecodeShortURL(s)))))
-	newRouter.Post("/api/shorten", middleware.AuthenticateUser(middleware.RequestLogger(log, middleware.GzipCompress(handlers.CreateShortURLJSON(s)))))
-	newRouter.Get("/ping", middleware.AuthenticateUser(middleware.RequestLogger(log, middleware.GzipCompress(handlers.Ping))))
-	newRouter.Post("/api/shorten/batch", middleware.AuthenticateUser(middleware.RequestLogger(log, middleware.GzipCompress(handlers.CreateShortURLBatch(s)))))
+	newRouter.Post("/", middleware.AuthenticateUser(false, middleware.RequestLogger(log, middleware.GzipCompress(handlers.CreateShortURL(s)))))
+	newRouter.Get("/{id}", middleware.AuthenticateUser(false, middleware.RequestLogger(log, middleware.GzipCompress(handlers.DecodeShortURL(s)))))
+	newRouter.Post("/api/shorten", middleware.AuthenticateUser(false, middleware.RequestLogger(log, middleware.GzipCompress(handlers.CreateShortURLJSON(s)))))
+	newRouter.Get("/ping", middleware.AuthenticateUser(false, middleware.RequestLogger(log, middleware.GzipCompress(handlers.Ping))))
+	newRouter.Post("/api/shorten/batch", middleware.AuthenticateUser(false, middleware.RequestLogger(log, middleware.GzipCompress(handlers.CreateShortURLBatch(s)))))
 	return newRouter
 }
