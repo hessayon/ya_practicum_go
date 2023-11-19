@@ -6,6 +6,12 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+	"crypto/aes"    
+	"crypto/cipher" 
+	"crypto/rand"
+	"io"
+	"strings"
+	"encoding/hex"
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
@@ -110,7 +116,7 @@ func RequestLogger(log *zap.Logger, h http.HandlerFunc) http.HandlerFunc {
 		)
 	})
 }
-const SECRET_KEY = "supersecretkey"
+const SECRET_KEY = "9VAwVrKwAJNUYBySuhPVQWHnwkpuogGj"
 const TOKEN_EXP = time.Hour * 24
 const CONTEXT_KEY = "uuid"
 
@@ -133,9 +139,54 @@ func BuildJWTString(userUUID string) (string, error) {
 	return tokenString, nil
 }
 
-func GetUserID(tokenString string) (string, error) {
+var ErrInvalidValue = errors.New("invalid cookie value")
+
+
+func GetDecryptedCookie(name string, encryptedCookie []byte, secretKey []byte) (string, error) {
+
+	block, err := aes.NewCipher(secretKey)
+	if err != nil {
+			return "", err
+	}
+
+	aesGCM, err := cipher.NewGCM(block)
+	if err != nil {
+			return "", err
+	}
+
+	nonceSize := aesGCM.NonceSize()
+	nonce := encryptedCookie[:nonceSize]
+	ciphertext := encryptedCookie[nonceSize:]
+
+	plaintext, err := aesGCM.Open(nil, []byte(nonce), []byte(ciphertext), nil)
+	if err != nil {
+			return "", ErrInvalidValue
+	}
+
+	expectedName, value, ok := strings.Cut(string(plaintext), ":")
+	if !ok {
+			return "", ErrInvalidValue
+	}
+
+	if expectedName != name {
+			return "", ErrInvalidValue
+	}
+
+	return value, nil
+}
+
+
+func GetUserID(cookie *http.Cookie) (string, error) {
+	cookieValue, err := hex.DecodeString(cookie.Value)
+	if err != nil {
+		return "", err
+	}
+	decryptedCookie, err := GetDecryptedCookie(cookie.Name, cookieValue, []byte(SECRET_KEY))
+	if err != nil {
+		return "", err
+	}
 	claims := &Claims{}
-	token, err := jwt.ParseWithClaims(tokenString, claims,
+	token, err := jwt.ParseWithClaims(decryptedCookie, claims,
 	func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			errMsg := fmt.Sprintf("unexpected signing method: %v", t.Header["alg"])
@@ -155,7 +206,57 @@ func GetUserID(tokenString string) (string, error) {
 }
 
 
+
+func GetEncryptedCookie(cookie http.Cookie, secretKey []byte) (*http.Cookie, error) {
+
+	block, err := aes.NewCipher(secretKey)
+	if err != nil {
+			return nil, err
+	}
+	aesGCM, err := cipher.NewGCM(block)
+	if err != nil {
+			return nil, err
+	}
+
+	nonce := make([]byte, aesGCM.NonceSize())
+	_, err = io.ReadFull(rand.Reader, nonce)
+	if err != nil {
+			return nil, err
+	}
+
+	plaintext := fmt.Sprintf("%s:%s", cookie.Name, cookie.Value)
+	encryptedValue := aesGCM.Seal(nonce, nonce, []byte(plaintext), nil)
+	cookie.Value = hex.EncodeToString(encryptedValue)
+
+	return &cookie, nil
+}
+
+
 type uuidKey struct{ }
+
+func setUserTokenCookie(w http.ResponseWriter, userID string) error {
+	
+	jwtToken, err := BuildJWTString(userID)
+	if err != nil {
+		return err
+	}
+	newCookie := http.Cookie{
+		Name:     "UserToken",
+		Value:    jwtToken,
+		// Path:     "/",
+		MaxAge:   3600,
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+	}
+	encryptedCookie, err := GetEncryptedCookie(newCookie, []byte(SECRET_KEY))
+	if err != nil {
+		return err
+	}
+	http.SetCookie(w, encryptedCookie)
+	return nil
+}
+
 
 func AuthenticateUser(h http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -163,26 +264,21 @@ func AuthenticateUser(h http.HandlerFunc) http.HandlerFunc {
 		var userID string
     if cookie == nil || err != nil{
 			userID = uuid.Must(uuid.NewRandom()).String()
-			jwtToken, err := BuildJWTString(userID)
+			err = setUserTokenCookie(w, userID)
 			if err != nil {
+				fmt.Print(err)
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
-			newCookie := http.Cookie{
-        Name:     "UserToken",
-        Value:    jwtToken,
-        // Path:     "/",
-        MaxAge:   3600,
-        HttpOnly: true,
-        Secure:   true,
-        SameSite: http.SameSiteLaxMode,
-    	}
-			http.SetCookie(w, &newCookie)
 		} else {
-			userID, err = GetUserID(cookie.Value)
+			userID, err = GetUserID(cookie)
 			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
+				userID = uuid.Must(uuid.NewRandom()).String()
+				err = setUserTokenCookie(w, userID)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
 			}
 		}
 
