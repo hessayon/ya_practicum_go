@@ -1,7 +1,12 @@
 package middleware
+
 import (
+	"errors"
+	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/hessayon/ya_practicum_go/internal/compressing"
 	"go.uber.org/zap"
 )
@@ -18,6 +23,15 @@ type (
 		ResponseData        *ResponseData
 	}
 )
+
+
+// Claims — структура утверждений, которая включает стандартные утверждения
+// и одно пользовательское — UserID
+type Claims struct {
+	jwt.RegisteredClaims
+	UserID string
+}
+
 
 func (r *LoggingResponseWriter) Write(b []byte) (int, error) {
 	// записываем ответ, используя оригинальный http.ResponseWriter
@@ -92,5 +106,71 @@ func RequestLogger(log *zap.Logger, h http.HandlerFunc) http.HandlerFunc {
 			zap.Int("size", responseData.Size),
 			zap.Strings("accept_encoding", r.Header.Values("Accept-Encoding")),
 		)
+	})
+}
+const SECRET_KEY = "supersecretkey"
+const TOKEN_EXP = time.Hour * 24
+
+func BuildJWTString(userUUID string) (string, error) {
+	// создаём новый токен с алгоритмом подписи HS256 и утверждениями — Claims
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims {
+			RegisteredClaims: jwt.RegisteredClaims{
+					// когда создан токен
+					ExpiresAt: jwt.NewNumericDate(time.Now().Add(TOKEN_EXP)),
+			},
+			// собственное утверждение
+			UserID: userUUID,
+	})
+
+	// создаём строку токена
+	tokenString, err := token.SignedString([]byte(SECRET_KEY))
+	if err != nil {
+			return "", err
+	}
+	return tokenString, nil
+}
+
+func GetUserID(tokenString string) (string, error) {
+	claims := &Claims{}
+	token, err := jwt.ParseWithClaims(tokenString, claims,
+	func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			errMsg := fmt.Sprintf("unexpected signing method: %v", t.Header["alg"])
+			return nil, errors.New(errMsg)
+		}
+		return []byte(SECRET_KEY), nil
+	})
+	if err != nil {
+			return "", err
+	}
+
+	if !token.Valid {
+			return "", errors.New("token is not valid")
+	}
+
+	return claims.UserID, nil  
+}
+
+func AuthenticateUser(h http.HandlerFunc) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cookie, err := r.Cookie("UserToken")
+    if cookie == nil || err != nil{
+			jwtToken, err := BuildJWTString(r.RequestURI)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			newCookie := http.Cookie{
+        Name:     "UserToken",
+        Value:    jwtToken,
+        // Path:     "/",
+        MaxAge:   3600,
+        HttpOnly: true,
+        Secure:   true,
+        SameSite: http.SameSiteLaxMode,
+    	}
+			http.SetCookie(w, &newCookie)
+		}
+		h(w, r)
 	})
 }
