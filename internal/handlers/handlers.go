@@ -200,15 +200,21 @@ func CreateShortURLBatch(s storage.URLStorage) http.HandlerFunc {
 
 func GetURLsByUser(s storage.URLStorage) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		resultList, err := s.GetURLsByUserID(middleware.UserIDFromContext(r.Context()))
+		usersURLs, err := s.GetURLsByUserID(middleware.UserIDFromContext(r.Context()))
 		if err != nil {
 			logger.Log.Error("error in GetURLsByUserID", zap.String("error", err.Error()))
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
+		resList := make([]storage.URLData, 0, len(usersURLs))
+		for _, elem := range usersURLs {
+			shortURL := fmt.Sprintf("%s/%s", config.Config.BaseAddr, elem.ShortURL)
+			elem.ShortURL = shortURL
+			resList = append(resList, elem)
+		}
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
-		if err := json.NewEncoder(w).Encode(resultList); err != nil {
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(resList); err != nil {
 			logger.Log.Error("error in encoding response body", zap.String("error", err.Error()))
 			http.Error(w, "service internal error", http.StatusBadRequest)
 			return
