@@ -205,6 +205,35 @@ func GetUserID(cookie *http.Cookie) (string, error) {
 	return claims.UserID, nil  
 }
 
+// метод вычитывающий токен из хедера, чтобы прошли тесты
+func GetUserIDFromHeader(cookie string) (string, error) {
+	cookieValue, err := hex.DecodeString(cookie)
+	if err != nil {
+		return "", err
+	}
+	decryptedCookie, err := GetDecryptedCookie("UserToken", cookieValue, []byte(secretKey))
+	if err != nil {
+		return "", err
+	}
+	claims := &Claims{}
+	token, err := jwt.ParseWithClaims(decryptedCookie, claims,
+	func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			errMsg := fmt.Sprintf("unexpected signing method: %v", t.Header["alg"])
+			return nil, errors.New(errMsg)
+		}
+		return []byte(secretKey), nil
+	})
+	if err != nil {
+			return "", err
+	}
+
+	if !token.Valid {
+			return "", errors.New("token is not valid")
+	}
+
+	return claims.UserID, nil  
+}
 
 
 func GetEncryptedCookie(cookie http.Cookie, secretKey []byte) (*http.Cookie, error) {
@@ -254,28 +283,34 @@ func setUserTokenCookie(w http.ResponseWriter, userID string) error {
 		return err
 	}
 	http.SetCookie(w, encryptedCookie)
+	// проставляю хедер, чтобы прошли тесты
+	w.Header().Add("Authorization", encryptedCookie.Value)
 	return nil
 }
 
 
 func AuthenticateUser(authRequired bool, h http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cookie, err := r.Cookie("UserToken")
+		//cookie, err := r.Cookie("UserToken")
+		cookie := r.Header.Get("Authorization")
 		var userID string
-    if cookie == nil || err != nil {
+    // if cookie == nil || err != nil {
+		if cookie == "" {
 			if authRequired {
 				w.WriteHeader(http.StatusUnauthorized)
 				return
 			}
 			userID = uuid.Must(uuid.NewRandom()).String()
-			err = setUserTokenCookie(w, userID)
+			err := setUserTokenCookie(w, userID)
 			if err != nil {
 				logger.Log.Error("error in setUserTokenCookie()", zap.String("error", err.Error()))
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 		} else {
-			userID, err = GetUserID(cookie)
+			// userID, err := GetUserID(cookie)
+			var err error
+			userID, err = GetUserIDFromHeader(cookie)
 			if err != nil {
 				if authRequired {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -284,7 +319,6 @@ func AuthenticateUser(authRequired bool, h http.HandlerFunc) http.HandlerFunc {
 				userID = uuid.Must(uuid.NewRandom()).String()
 				err = setUserTokenCookie(w, userID)
 				if err != nil {
-					logger.Log.Error("error in setUserTokenCookie()", zap.String("error", err.Error()))
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
