@@ -2,20 +2,21 @@ package middleware
 
 import (
 	"context"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
-	"net/http"
-	"time"
-	"crypto/aes"    
-	"crypto/cipher" 
-	"crypto/rand"
 	"io"
+	"net/http"
 	"strings"
-	"encoding/hex"
+	"time"
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
 	"github.com/hessayon/ya_practicum_go/internal/compressing"
+	"github.com/hessayon/ya_practicum_go/internal/logger"
 	"go.uber.org/zap"
 )
 
@@ -269,7 +270,7 @@ func AuthenticateUser(authRequired bool, h http.HandlerFunc) http.HandlerFunc {
 			userID = uuid.Must(uuid.NewRandom()).String()
 			err = setUserTokenCookie(w, userID)
 			if err != nil {
-				fmt.Print(err)
+				logger.Log.Error("error in setUserTokenCookie()", zap.String("error", err.Error()))
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
@@ -283,7 +284,7 @@ func AuthenticateUser(authRequired bool, h http.HandlerFunc) http.HandlerFunc {
 				userID = uuid.Must(uuid.NewRandom()).String()
 				err = setUserTokenCookie(w, userID)
 				if err != nil {
-					fmt.Print(err)
+					logger.Log.Error("error in setUserTokenCookie()", zap.String("error", err.Error()))
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
