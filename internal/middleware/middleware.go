@@ -283,6 +283,7 @@ func AuthenticateUser(authRequired bool, h http.HandlerFunc) http.HandlerFunc {
 				userID = uuid.Must(uuid.NewRandom()).String()
 				err = setUserTokenCookie(w, userID)
 				if err != nil {
+					fmt.Print(err)
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
