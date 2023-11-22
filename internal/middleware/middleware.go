@@ -113,7 +113,6 @@ func RequestLogger(log *zap.Logger, h http.HandlerFunc) http.HandlerFunc {
 		log.Info("response to incoming HTTP request",
 			zap.Int("status", responseData.Status),
 			zap.Int("size", responseData.Size),
-			zap.Strings("accept_encoding", r.Header.Values("Accept-Encoding")),
 		)
 	})
 }
