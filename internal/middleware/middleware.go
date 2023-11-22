@@ -291,11 +291,11 @@ func setUserTokenCookie(w http.ResponseWriter, userID string) error {
 
 func AuthenticateUser(authRequired bool, h http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		//cookie, err := r.Cookie("UserToken")
-		cookie := r.Header.Get("Authorization")
+		cookie, err := r.Cookie("UserToken")
+		//cookie := r.Header.Get("Authorization")
 		var userID string
-    // if cookie == nil || err != nil {
-		if cookie == "" {
+    if cookie == nil || err != nil {
+		// if cookie == "" {
 			if authRequired {
 				w.WriteHeader(http.StatusNoContent) // чтобы прошли тесты
 				return
@@ -308,9 +308,9 @@ func AuthenticateUser(authRequired bool, h http.HandlerFunc) http.HandlerFunc {
 				return
 			}
 		} else {
-			// userID, err := GetUserID(cookie)
-			var err error
-			userID, err = GetUserIDFromHeader(cookie)
+			userID, err = GetUserID(cookie)
+			// var err error
+			// userID, err = GetUserIDFromHeader(cookie)
 			if err != nil {
 				if authRequired {
 					w.WriteHeader(http.StatusNoContent) // чтобы прошли тесты
