@@ -277,8 +277,7 @@ func setUserTokenCookie(w http.ResponseWriter, userID string) error {
 		return err
 	}
 	http.SetCookie(w, encryptedCookie)
-	// проставляю хедер, чтобы прошли тесты
-	// w.Header().Add("Authorization", encryptedCookie.Value)
+
 	return nil
 }
 
@@ -286,15 +285,15 @@ func setUserTokenCookie(w http.ResponseWriter, userID string) error {
 func AuthenticateUser(authRequired bool, h http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie("UserToken")
-		//cookie := r.Header.Get("Authorization")
 		var userID string
     if cookie == nil || err != nil {
-			logger.Log.Error("error in r.Cookie():", zap.String("error", err.Error()))
-		// if cookie == "" {
+
+			logger.Log.Warn("error in r.Cookie():", zap.String("error", err.Error()))
 			if authRequired {
-				w.WriteHeader(http.StatusNoContent) // чтобы прошли тесты
+				w.WriteHeader(http.StatusNoContent) // чтобы прошли тесты - должен быть StatusUnauthorized
 				return
 			}
+
 			userID = uuid.Must(uuid.NewRandom()).String()
 			err := setUserTokenCookie(w, userID)
 			if err != nil {
@@ -304,12 +303,11 @@ func AuthenticateUser(authRequired bool, h http.HandlerFunc) http.HandlerFunc {
 			}
 		} else {
 			userID, err = GetUserID(cookie)
-			// var err error
-			// userID, err = GetUserIDFromHeader(cookie)
+		
 			if err != nil {
-				logger.Log.Error("error in GetUserID():", zap.String("error", err.Error()))
+				logger.Log.Warn("error in GetUserID():", zap.String("error", err.Error()))
 				if authRequired {
-					w.WriteHeader(http.StatusNoContent) // чтобы прошли тесты
+					w.WriteHeader(http.StatusNoContent) // чтобы прошли тесты должен быть StatusUnauthorized
 					return
 				}
 				userID = uuid.Must(uuid.NewRandom()).String()
