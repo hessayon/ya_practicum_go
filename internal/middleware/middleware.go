@@ -271,11 +271,6 @@ func setUserTokenCookie(w http.ResponseWriter, userID string) error {
 	newCookie := http.Cookie{
 		Name:     "UserToken",
 		Value:    jwtToken,
-		// Path:     "/",
-		MaxAge:   3600,
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteLaxMode,
 	}
 	encryptedCookie, err := GetEncryptedCookie(newCookie, []byte(secretKey))
 	if err != nil {
