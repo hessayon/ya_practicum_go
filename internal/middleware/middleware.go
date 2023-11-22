@@ -289,6 +289,7 @@ func AuthenticateUser(authRequired bool, h http.HandlerFunc) http.HandlerFunc {
 		//cookie := r.Header.Get("Authorization")
 		var userID string
     if cookie == nil || err != nil {
+			logger.Log.Error("error in r.Cookie():", zap.String("error", err.Error()))
 		// if cookie == "" {
 			if authRequired {
 				w.WriteHeader(http.StatusNoContent) // чтобы прошли тесты
@@ -306,6 +307,7 @@ func AuthenticateUser(authRequired bool, h http.HandlerFunc) http.HandlerFunc {
 			// var err error
 			// userID, err = GetUserIDFromHeader(cookie)
 			if err != nil {
+				logger.Log.Error("error in GetUserID():", zap.String("error", err.Error()))
 				if authRequired {
 					w.WriteHeader(http.StatusNoContent) // чтобы прошли тесты
 					return
