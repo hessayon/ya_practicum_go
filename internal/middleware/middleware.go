@@ -284,7 +284,7 @@ func setUserTokenCookie(w http.ResponseWriter, userID string) error {
 	}
 	http.SetCookie(w, encryptedCookie)
 	// проставляю хедер, чтобы прошли тесты
-	w.Header().Add("Authorization", encryptedCookie.Value)
+	// w.Header().Add("Authorization", encryptedCookie.Value)
 	return nil
 }
 
