@@ -68,9 +68,8 @@ func CreateShortURL(s storage.URLStorage) http.HandlerFunc {
 		if err != nil {
 			if errors.Is(err, storage.ErrConflict) {
 				statusCode = http.StatusConflict
-				var found bool
-				shortenedURL, found = s.GetShortURL(urlToShort)
-				if !found {
+				shortenedURL, err = s.GetShortURL(urlToShort)
+				if err != nil {
 					http.Error(w, "shortened url not found", http.StatusBadRequest)
 					return
 				}
@@ -88,8 +87,11 @@ func CreateShortURL(s storage.URLStorage) http.HandlerFunc {
 func DecodeShortURL(s storage.URLStorage) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		shortenedURL := chi.URLParam(r, "id")
-		originalURL, found := s.GetOriginalURL(shortenedURL)
-		if !found {
+		originalURL, err := s.GetOriginalURL(shortenedURL)
+		if err == storage.ErrAlreadyDeleted {
+			w.WriteHeader(http.StatusGone)
+			return
+		} else if err != nil {
 			http.Error(w, "shortened url not found", http.StatusBadRequest)
 			return
 		}
@@ -118,9 +120,8 @@ func CreateShortURLJSON(s storage.URLStorage) http.HandlerFunc {
 		if err != nil {
 			if errors.Is(err, storage.ErrConflict) {
 				statusCode = http.StatusConflict
-				var found bool
-				shortenedURL, found = s.GetShortURL(reqBody.URL)
-				if !found {
+				shortenedURL, err = s.GetShortURL(reqBody.URL)
+				if err != nil {
 					http.Error(w, "shortened url not found", http.StatusBadRequest)
 					return
 				}

@@ -47,11 +47,11 @@ func (mr *MockURLStorageMockRecorder) Close() *gomock.Call {
 }
 
 // GetOriginalURL mocks base method.
-func (m *MockURLStorage) GetOriginalURL(arg0 string) (string, bool) {
+func (m *MockURLStorage) GetOriginalURL(arg0 string) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetOriginalURL", arg0)
 	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(bool)
+	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
@@ -62,11 +62,11 @@ func (mr *MockURLStorageMockRecorder) GetOriginalURL(arg0 interface{}) *gomock.C
 }
 
 // GetShortURL mocks base method.
-func (m *MockURLStorage) GetShortURL(arg0 string) (string, bool) {
+func (m *MockURLStorage) GetShortURL(arg0 string) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetShortURL", arg0)
 	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(bool)
+	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 

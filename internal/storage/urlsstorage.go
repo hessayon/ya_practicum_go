@@ -18,8 +18,8 @@ import (
 type URLStorage interface {
 	Save(urlData *URLData) (err error)
 	SaveBatch(urlsBatch []*URLData) (err error)
-	GetOriginalURL(shortURL string) (value string, ok bool)
-	GetShortURL(originalURL string) (value string, ok bool)
+	GetOriginalURL(shortURL string) (value string, err error)
+	GetShortURL(originalURL string) (value string, err error)
 	GetURLsByUserID(userID string) (value []URLData, err error)
 	Close()
 }
@@ -28,6 +28,7 @@ type URLData struct {
 	UUID        string `json:"uuid,omitempty"`
 	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
+	DeletedFlag bool 		`json:"-"`
 }
 
 //--------------------------------------------------------------------
@@ -54,6 +55,8 @@ type URLDBStorage struct {
 //--------------------------------------------------------------------
 
 var ErrConflict = errors.New("data conflict")
+var ErrAlreadyDeleted = errors.New("url is already deleted")
+var ErrURLNotFound = errors.New("url is not found")
 
 //--------------------------------------------------------------------
 
@@ -96,14 +99,20 @@ func (storage *LocalURLStorage) SaveBatch(urlsBatch []*URLData) error {
 	return nil
 }
 
-func (storage *LocalURLStorage) GetOriginalURL(shortURL string) (string, bool) {
+func (storage *LocalURLStorage) GetOriginalURL(shortURL string) (string, error) {
 	fullURL, found := storage.ShortToOrig[shortURL]
-	return fullURL, found
+	if !found {
+		return "", ErrURLNotFound
+	}
+	return fullURL, nil
 }
 
-func (storage *LocalURLStorage) GetShortURL(originalURL string) (string, bool) {
+func (storage *LocalURLStorage) GetShortURL(originalURL string) (string, error) {
 	shortURL, found := storage.OrigToShort[originalURL]
-	return shortURL, found
+	if !found {
+		return "", ErrURLNotFound
+	}
+	return shortURL, nil
 }
 
 func (storage *LocalURLStorage) Close() {
@@ -129,6 +138,7 @@ func (storage *URLDBStorage) createTable() error {
 		short_url varchar NOT NULL,
 		full_url varchar NOT NULL,
 		uuid varchar NOT NULL,
+		deleted boolean DEFAULT FALSE;
 		CONSTRAINT urls_pk PRIMARY KEY (full_url)
 	);`
 	_, err := storage.DB.ExecContext(context.Background(), query)
@@ -194,28 +204,32 @@ func (storage *URLDBStorage) SaveBatch(urlsBatch []*URLData) error {
 	return tx.Commit()
 }
 
-func (storage *URLDBStorage) GetOriginalURL(shortURL string) (string, bool) {
-	query := "SELECT full_url FROM urls WHERE short_url = $1 LIMIT 1"
+func (storage *URLDBStorage) GetOriginalURL(shortURL string) (string, error) {
+	query := "SELECT full_url, deleted FROM urls WHERE short_url = $1 LIMIT 1"
 	row := storage.DB.QueryRowContext(context.Background(), query, shortURL)
 	var fullURL string
-	err := row.Scan(&fullURL)
+	var isDeleted bool
+	err := row.Scan(&fullURL, &isDeleted)
 	if err != nil {
 		log.Printf("Error in Scan: %s", err.Error())
-		return "", false
+		return "", ErrURLNotFound
 	}
-	return fullURL, true
+	if isDeleted {
+		return "", ErrAlreadyDeleted
+	}
+	return fullURL, nil
 }
 
-func (storage *URLDBStorage) GetShortURL(originalURL string) (string, bool) {
+func (storage *URLDBStorage) GetShortURL(originalURL string) (string, error) {
 	query := "SELECT short_url FROM urls WHERE full_url = $1 LIMIT 1"
 	row := storage.DB.QueryRowContext(context.Background(), query, originalURL)
 	var shortURL string
 	err := row.Scan(&shortURL)
 	if err != nil {
 		log.Printf("Error in Scan: %s", err.Error())
-		return "", false
+		return "", ErrURLNotFound
 	}
-	return shortURL, true
+	return shortURL, nil
 }
 
 func (storage *URLDBStorage) Close() {
