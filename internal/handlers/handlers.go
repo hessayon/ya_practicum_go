@@ -74,7 +74,7 @@ func CreateShortURL(s storage.URLStorage) http.HandlerFunc {
 					return
 				}
 			} else {
-				logger.Log.Error("Error in s.Save()", zap.String("error", err.Error()))
+				logger.Log.Error("Error in s.GetShortURL()", zap.String("error", err.Error()))
 			}
 		}
 
@@ -221,5 +221,32 @@ func GetURLsByUser(s storage.URLStorage) http.HandlerFunc {
 			return
 		}
 
+	})
+}
+
+func DeleteURLs(s storage.URLStorage) http.HandlerFunc {
+	
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		userID := middleware.UserIDFromContext(r.Context())
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			logger.Log.Error("error in decoding request body")
+			http.Error(w, "service internal error", http.StatusBadRequest)
+			return
+		}
+		var shortURLs []string
+		err = json.Unmarshal(body, &shortURLs)
+		if err != nil {
+			logger.Log.Error("error in decoding unmarshal request body")
+			http.Error(w, "service internal error", http.StatusBadRequest)
+			return
+		}
+		w.WriteHeader(http.StatusAccepted)
+		err = s.DeleteURLs(userID, shortURLs...)
+		if err != nil {
+			logger.Log.Error("error in DeleteURLs()", zap.String("userID", userID), zap.Strings("shortURLs", shortURLs), zap.String("error", err.Error()))
+			return
+		} 
+		logger.Log.Info("URLs are deleted", zap.String("userID", userID), zap.Strings("shortURLs", shortURLs))
 	})
 }

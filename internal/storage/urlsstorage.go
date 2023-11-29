@@ -144,7 +144,7 @@ func (storage *URLDBStorage) createTable() error {
 		short_url varchar NOT NULL,
 		full_url varchar NOT NULL,
 		uuid varchar NOT NULL,
-		deleted boolean DEFAULT FALSE;
+		deleted boolean DEFAULT FALSE,
 		CONSTRAINT urls_pk PRIMARY KEY (full_url)
 	);`
 	_, err := storage.DB.ExecContext(context.Background(), query)
@@ -269,7 +269,7 @@ func (storage *URLDBStorage) GetURLsByUserID(userID string) ([]URLData, error) {
 
 
 func (storage *URLDBStorage) DeleteURLs(userID string, urls...string) error {
-	query := "UPDATE urls SET deleted = TRUE WHERE short_url = $1 AND uuid = $2;"
+	query := "UPDATE urls SET deleted = true WHERE short_url = $1 AND uuid = $2;"
 	tx, err := storage.DB.Begin()
 	if err != nil {
 		return err

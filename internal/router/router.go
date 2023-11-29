@@ -18,5 +18,6 @@ func NewServiceRouter(log *zap.Logger, s storage.URLStorage) *chi.Mux {
 	newRouter.Get("/ping", middleware.RequestLogger(log, middleware.AuthenticateUser(false, middleware.GzipCompress(handlers.Ping))))
 	newRouter.Post("/api/shorten/batch", middleware.RequestLogger(log, middleware.AuthenticateUser(false, middleware.GzipCompress(handlers.CreateShortURLBatch(s)))))
 	newRouter.Get("/api/user/urls", middleware.RequestLogger(log, middleware.AuthenticateUser(true, middleware.GzipCompress(handlers.GetURLsByUser(s)))))
+	newRouter.Delete("/api/user/urls", middleware.RequestLogger(log, middleware.AuthenticateUser(false, middleware.GzipCompress(handlers.DeleteURLs(s)))))
 	return newRouter
 }
