@@ -13,8 +13,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/hessayon/ya_practicum_go/internal/config"
 	"github.com/hessayon/ya_practicum_go/internal/logger"
-	"github.com/hessayon/ya_practicum_go/internal/storage"
 	"github.com/hessayon/ya_practicum_go/internal/middleware"
+	"github.com/hessayon/ya_practicum_go/internal/storage"
+	"github.com/hessayon/ya_practicum_go/internal/task_pool.go"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"go.uber.org/zap"
 )
@@ -242,11 +243,17 @@ func DeleteURLs(s storage.URLStorage) http.HandlerFunc {
 			return
 		}
 		w.WriteHeader(http.StatusAccepted)
-		err = s.DeleteURLs(userID, shortURLs...)
-		if err != nil {
-			logger.Log.Error("error in DeleteURLs()", zap.String("userID", userID), zap.Strings("shortURLs", shortURLs), zap.String("error", err.Error()))
-			return
-		} 
-		logger.Log.Info("URLs are deleted", zap.String("userID", userID), zap.Strings("shortURLs", shortURLs))
+		tp := task_pool.NewTaskPool(20, logger.Log)
+		defer tp.Stop()
+		tp.AddTask(func() error {
+			return s.DeleteURLs(userID, shortURLs...)
+		})
+		tp.Wait()
+		// err = s.DeleteURLs(userID, shortURLs...)
+		// if err != nil {
+		// 	logger.Log.Error("error in DeleteURLs()", zap.String("userID", userID), zap.Strings("shortURLs", shortURLs), zap.String("error", err.Error()))
+		// 	return
+		// } 
+		// logger.Log.Info("URLs are deleted", zap.String("userID", userID), zap.Strings("shortURLs", shortURLs))
 	})
 }
