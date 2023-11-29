@@ -76,6 +76,21 @@ func (mr *MockURLStorageMockRecorder) GetShortURL(arg0 interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShortURL", reflect.TypeOf((*MockURLStorage)(nil).GetShortURL), arg0)
 }
 
+// GetURLsByUserID mocks base method.
+func (m *MockURLStorage) GetURLsByUserID(arg0 string) ([]storage.URLData, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetURLsByUserID", arg0)
+	ret0, _ := ret[0].([]storage.URLData)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetURLsByUserID indicates an expected call of GetURLsByUserID.
+func (mr *MockURLStorageMockRecorder) GetURLsByUserID(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetURLsByUserID", reflect.TypeOf((*MockURLStorage)(nil).GetURLsByUserID), arg0)
+}
+
 // Save mocks base method.
 func (m *MockURLStorage) Save(arg0 *storage.URLData) error {
 	m.ctrl.T.Helper()
