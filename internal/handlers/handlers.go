@@ -15,7 +15,7 @@ import (
 	"github.com/hessayon/ya_practicum_go/internal/logger"
 	"github.com/hessayon/ya_practicum_go/internal/middleware"
 	"github.com/hessayon/ya_practicum_go/internal/storage"
-	"github.com/hessayon/ya_practicum_go/internal/task_pool.go"
+	"github.com/hessayon/ya_practicum_go/internal/taskpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"go.uber.org/zap"
 )
@@ -243,7 +243,7 @@ func DeleteURLs(s storage.URLStorage) http.HandlerFunc {
 			return
 		}
 		w.WriteHeader(http.StatusAccepted)
-		tp := task_pool.NewTaskPool(20, logger.Log)
+		tp := taskpool.NewTaskPool(20, logger.Log)
 		defer tp.Stop()
 		tp.AddTask(func() error {
 			return s.DeleteURLs(userID, shortURLs...)
