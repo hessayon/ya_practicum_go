@@ -171,7 +171,7 @@ func AuthenticateUser(authRequired bool, h http.HandlerFunc) http.HandlerFunc {
 
 			logger.Log.Warn("error in r.Cookie():", zap.String("error", err.Error()))
 			if authRequired {
-				w.WriteHeader(http.StatusNoContent) // чтобы прошли тесты - должен быть StatusUnauthorized
+				w.WriteHeader(http.StatusUnauthorized)
 				return
 			}
 
@@ -188,7 +188,7 @@ func AuthenticateUser(authRequired bool, h http.HandlerFunc) http.HandlerFunc {
 			if err != nil {
 				logger.Log.Warn("error in getUserID():", zap.String("error", err.Error()))
 				if authRequired {
-					w.WriteHeader(http.StatusNoContent) // чтобы прошли тесты должен быть StatusUnauthorized
+					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
 				userID = uuid.Must(uuid.NewRandom()).String()
