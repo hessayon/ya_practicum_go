@@ -21,6 +21,7 @@ type URLStorage interface {
 	GetOriginalURL(shortURL string) (value string, err error)
 	GetShortURL(originalURL string) (value string, err error)
 	GetURLsByUserID(userID string) (value []URLData, err error)
+	DeleteURLs(urls...string) (err error)
 	Close()
 }
 
@@ -42,6 +43,7 @@ type LocalURLStorage struct {
 	ShortToOrig map[string]string
 	OrigToShort map[string]string
 	UUIDToData map[string][]URLData
+	URLsToDelete []string
 	filename    string
 	saver       *URLStorageFileSaver
 }
@@ -128,6 +130,10 @@ func (storage *LocalURLStorage) GetURLsByUserID(userID string) ([]URLData, error
 		return nil, errors.New(errMsg)
 	}
 	return resList, nil
+}
+
+func (storage *LocalURLStorage) DeleteURLs(urls...string) error {
+	return nil
 }
 
 //--------------------------------------------------------------------
@@ -260,6 +266,11 @@ func (storage *URLDBStorage) GetURLsByUserID(userID string) ([]URLData, error) {
 	}
 	return resList, nil
 }
+
+
+func (storage *URLDBStorage) DeleteURLs(urls...string) error {
+	return nil
+}
 //--------------------------------------------------------------------
 
 
@@ -285,6 +296,7 @@ func newLocalURLStorage(filename string) (*LocalURLStorage, error) {
 		ShortToOrig: make(map[string]string),
 		OrigToShort: make(map[string]string),
 		UUIDToData: make(map[string][]URLData),
+		URLsToDelete: make([]string, 0),
 		filename:    filename,
 		saver:       nil,
 	}
