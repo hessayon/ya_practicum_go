@@ -47,10 +47,10 @@ func (mr *MockURLStorageMockRecorder) Close() *gomock.Call {
 }
 
 // DeleteURLs mocks base method.
-func (m *MockURLStorage) DeleteURLs(arg0 ...string) error {
+func (m *MockURLStorage) DeleteURLs(arg0 string, arg1 ...string) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{}
-	for _, a := range arg0 {
+	varargs := []interface{}{arg0}
+	for _, a := range arg1 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "DeleteURLs", varargs...)
@@ -59,9 +59,10 @@ func (m *MockURLStorage) DeleteURLs(arg0 ...string) error {
 }
 
 // DeleteURLs indicates an expected call of DeleteURLs.
-func (mr *MockURLStorageMockRecorder) DeleteURLs(arg0 ...interface{}) *gomock.Call {
+func (mr *MockURLStorageMockRecorder) DeleteURLs(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteURLs", reflect.TypeOf((*MockURLStorage)(nil).DeleteURLs), arg0...)
+	varargs := append([]interface{}{arg0}, arg1...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteURLs", reflect.TypeOf((*MockURLStorage)(nil).DeleteURLs), varargs...)
 }
 
 // GetOriginalURL mocks base method.

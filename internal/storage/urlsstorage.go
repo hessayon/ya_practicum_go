@@ -21,7 +21,7 @@ type URLStorage interface {
 	GetOriginalURL(shortURL string) (value string, err error)
 	GetShortURL(originalURL string) (value string, err error)
 	GetURLsByUserID(userID string) (value []URLData, err error)
-	DeleteURLs(urls...string) (err error)
+	DeleteURLs(userID string, urls...string) (err error)
 	Close()
 }
 
@@ -132,7 +132,7 @@ func (storage *LocalURLStorage) GetURLsByUserID(userID string) ([]URLData, error
 	return resList, nil
 }
 
-func (storage *LocalURLStorage) DeleteURLs(urls...string) error {
+func (storage *LocalURLStorage) DeleteURLs(userID string, urls...string) error {
 	return nil
 }
 
@@ -268,8 +268,27 @@ func (storage *URLDBStorage) GetURLsByUserID(userID string) ([]URLData, error) {
 }
 
 
-func (storage *URLDBStorage) DeleteURLs(urls...string) error {
-	return nil
+func (storage *URLDBStorage) DeleteURLs(userID string, urls...string) error {
+	query := "UPDATE urls SET deleted = TRUE WHERE short_url = $1 AND uuid = $2;"
+	tx, err := storage.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	ctx := context.Background()
+	stmt, err := tx.PrepareContext(ctx, query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	for _, url := range urls {
+		_, err := stmt.ExecContext(ctx, url, userID)
+		if err != nil {
+				return err
+			}
+		}
+	return tx.Commit()
+
 }
 //--------------------------------------------------------------------
 
