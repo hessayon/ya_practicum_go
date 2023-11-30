@@ -13,7 +13,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/hessayon/ya_practicum_go/internal/config"
 	"github.com/hessayon/ya_practicum_go/internal/logger"
+	"github.com/hessayon/ya_practicum_go/internal/middleware"
 	"github.com/hessayon/ya_practicum_go/internal/storage"
+	"github.com/hessayon/ya_practicum_go/internal/taskpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"go.uber.org/zap"
 )
@@ -57,9 +59,9 @@ func CreateShortURL(s storage.URLStorage) http.HandlerFunc {
 		}
 		urlToShort := string(body)
 		shortenedURL := getShortURL(urlToShort)
-
+		
 		err = s.Save(&storage.URLData{
-			UUID:        r.RequestURI,
+			UUID:        middleware.UserIDFromContext(r.Context()),
 			ShortURL:    shortenedURL,
 			OriginalURL: urlToShort,
 		})
@@ -67,14 +69,13 @@ func CreateShortURL(s storage.URLStorage) http.HandlerFunc {
 		if err != nil {
 			if errors.Is(err, storage.ErrConflict) {
 				statusCode = http.StatusConflict
-				var found bool
-				shortenedURL, found = s.GetShortURL(urlToShort)
-				if !found {
+				shortenedURL, err = s.GetShortURL(urlToShort)
+				if err != nil {
 					http.Error(w, "shortened url not found", http.StatusBadRequest)
 					return
 				}
 			} else {
-				logger.Log.Error("Error in s.Save()", zap.String("error", err.Error()))
+				logger.Log.Error("Error in s.GetShortURL()", zap.String("error", err.Error()))
 			}
 		}
 
@@ -87,8 +88,11 @@ func CreateShortURL(s storage.URLStorage) http.HandlerFunc {
 func DecodeShortURL(s storage.URLStorage) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		shortenedURL := chi.URLParam(r, "id")
-		originalURL, found := s.GetOriginalURL(shortenedURL)
-		if !found {
+		originalURL, err := s.GetOriginalURL(shortenedURL)
+		if err == storage.ErrAlreadyDeleted {
+			w.WriteHeader(http.StatusGone)
+			return
+		} else if err != nil {
 			http.Error(w, "shortened url not found", http.StatusBadRequest)
 			return
 		}
@@ -109,7 +113,7 @@ func CreateShortURLJSON(s storage.URLStorage) http.HandlerFunc {
 		shortenedURL := getShortURL(reqBody.URL)
 
 		err = s.Save(&storage.URLData{
-			UUID:        r.RequestURI,
+			UUID:        middleware.UserIDFromContext(r.Context()),
 			ShortURL:    shortenedURL,
 			OriginalURL: reqBody.URL,
 		})
@@ -117,9 +121,8 @@ func CreateShortURLJSON(s storage.URLStorage) http.HandlerFunc {
 		if err != nil {
 			if errors.Is(err, storage.ErrConflict) {
 				statusCode = http.StatusConflict
-				var found bool
-				shortenedURL, found = s.GetShortURL(reqBody.URL)
-				if !found {
+				shortenedURL, err = s.GetShortURL(reqBody.URL)
+				if err != nil {
 					http.Error(w, "shortened url not found", http.StatusBadRequest)
 					return
 				}
@@ -174,7 +177,7 @@ func CreateShortURLBatch(s storage.URLStorage) http.HandlerFunc {
 		for _, data := range reqBody {
 			shortenedURL := getShortURL(data.OriginalURL)
 			urlsData = append(urlsData, &storage.URLData{
-				UUID:        r.RequestURI,
+				UUID:        middleware.UserIDFromContext(r.Context()),
 				ShortURL:    shortenedURL,
 				OriginalURL: data.OriginalURL,
 			})
@@ -189,9 +192,67 @@ func CreateShortURLBatch(s storage.URLStorage) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		if err := json.NewEncoder(w).Encode(responseData); err != nil {
-			logger.Log.Error("error in encoding response body")
+			logger.Log.Error("error in encoding response body", zap.String("error", err.Error()))
 			http.Error(w, "service internal error", http.StatusBadRequest)
 			return
 		}
+	})
+}
+
+
+func GetURLsByUser(s storage.URLStorage) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		usersURLs, err := s.GetURLsByUserID(middleware.UserIDFromContext(r.Context()))
+		if err != nil {
+			logger.Log.Error("error in GetURLsByUserID", zap.String("error", err.Error()))
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		resList := make([]storage.URLData, 0, len(usersURLs))
+		for _, elem := range usersURLs {
+			shortURL := fmt.Sprintf("%s/%s", config.Config.BaseAddr, elem.ShortURL)
+			elem.ShortURL = shortURL
+			resList = append(resList, elem)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(resList); err != nil {
+			logger.Log.Error("error in encoding response body", zap.String("error", err.Error()))
+			http.Error(w, "service internal error", http.StatusBadRequest)
+			return
+		}
+
+	})
+}
+
+func DeleteURLs(s storage.URLStorage, tp *taskpool.TaskPool) http.HandlerFunc {
+	
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		userID := middleware.UserIDFromContext(r.Context())
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			logger.Log.Error("error in decoding request body")
+			http.Error(w, "service internal error", http.StatusBadRequest)
+			return
+		}
+		var shortURLs []string
+		err = json.Unmarshal(body, &shortURLs)
+		if err != nil {
+			logger.Log.Error("error in decoding unmarshal request body")
+			http.Error(w, "service internal error", http.StatusBadRequest)
+			return
+		}
+		w.WriteHeader(http.StatusAccepted)
+		
+		tp.AddTask(func() error {
+			return s.DeleteURLs(userID, shortURLs...)
+		})
+
+		// err = s.DeleteURLs(userID, shortURLs...)
+		// if err != nil {
+		// 	logger.Log.Error("error in DeleteURLs()", zap.String("userID", userID), zap.Strings("shortURLs", shortURLs), zap.String("error", err.Error()))
+		// 	return
+		// } 
+		// logger.Log.Info("URLs are deleted", zap.String("userID", userID), zap.Strings("shortURLs", shortURLs))
 	})
 }

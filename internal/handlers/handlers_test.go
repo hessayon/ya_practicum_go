@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -67,7 +68,7 @@ func TestDecodeShortURLHandler(t *testing.T) {
 		correctReq    bool
 		getCallKey    string
 		getCallValue  string
-		getCallStatus bool
+		getCallStatus error
 		requestURL    string
 		want          want
 	}{
@@ -76,7 +77,7 @@ func TestDecodeShortURLHandler(t *testing.T) {
 			correctReq:    true,
 			getCallKey:    "EwHXdJfB",
 			getCallValue:  "https://practicum.yandex.ru/",
-			getCallStatus: true,
+			getCallStatus: nil,
 			requestURL:    "/EwHXdJfB",
 			want: want{
 				code:                307,
@@ -88,7 +89,7 @@ func TestDecodeShortURLHandler(t *testing.T) {
 			correctReq:    true,
 			getCallKey:    "yhfjOHdb",
 			getCallValue:  "",
-			getCallStatus: false,
+			getCallStatus: errors.New("error in get"),
 			requestURL:    "/yhfjOHdb",
 			want: want{
 				code:                400,

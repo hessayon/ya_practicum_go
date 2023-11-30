@@ -1,10 +1,13 @@
 package middleware
+
+
 import (
 	"net/http"
 	"time"
-	"github.com/hessayon/ya_practicum_go/internal/compressing"
+
 	"go.uber.org/zap"
 )
+
 
 type (
 	ResponseData struct {
@@ -19,6 +22,9 @@ type (
 	}
 )
 
+
+
+
 func (r *LoggingResponseWriter) Write(b []byte) (int, error) {
 	// записываем ответ, используя оригинальный http.ResponseWriter
 	size, err := r.ResponseWriter.Write(b)
@@ -30,38 +36,6 @@ func (r *LoggingResponseWriter) WriteHeader(statusCode int) {
 	// записываем код статуса, используя оригинальный http.ResponseWriter
 	r.ResponseWriter.WriteHeader(statusCode)
 	r.ResponseData.Status = statusCode // захватываем код статуса
-}
-
-
-func GzipCompress(h http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		// по умолчанию устанавливаем оригинальный http.ResponseWriter как тот,
-		// который будем передавать следующей функции
-		currentWriter := w
-
-		// проверяем, что клиент умеет получать от сервера сжатые данные в формате gzip
-		supportsGzip := compressing.CheckSupportOfGzip(r.Header.Values("Accept-Encoding"))
-
-		if compressing.IsGzipContentType(r.Header.Get("Content-Type")) && supportsGzip{
-			compressWr := compressing.NewCompressWriter(w)
-			currentWriter = compressWr
-			defer compressWr.Close()
-		}
-
-		// проверяем, что клиент отправил серверу сжатые данные в формате gzip
-		sendsGzip := compressing.CheckSupportOfGzip(r.Header.Values("Content-Encoding"))
-		if sendsGzip {
-			cr, err := compressing.NewCompressReader(r.Body)
-			if err != nil {
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
-			r.Body = cr
-			defer cr.Close()
-		}
-
-		h(currentWriter, r)
-	}
 }
 
 
@@ -90,7 +64,6 @@ func RequestLogger(log *zap.Logger, h http.HandlerFunc) http.HandlerFunc {
 		log.Info("response to incoming HTTP request",
 			zap.Int("status", responseData.Status),
 			zap.Int("size", responseData.Size),
-			zap.Strings("accept_encoding", r.Header.Values("Accept-Encoding")),
 		)
 	})
 }
