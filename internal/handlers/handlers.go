@@ -225,7 +225,7 @@ func GetURLsByUser(s storage.URLStorage) http.HandlerFunc {
 	})
 }
 
-func DeleteURLs(s storage.URLStorage) http.HandlerFunc {
+func DeleteURLs(s storage.URLStorage, tp *taskpool.TaskPool) http.HandlerFunc {
 	
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.UserIDFromContext(r.Context())
@@ -243,12 +243,11 @@ func DeleteURLs(s storage.URLStorage) http.HandlerFunc {
 			return
 		}
 		w.WriteHeader(http.StatusAccepted)
-		tp := taskpool.NewTaskPool(20, logger.Log)
-		defer tp.Stop()
+		
 		tp.AddTask(func() error {
 			return s.DeleteURLs(userID, shortURLs...)
 		})
-		tp.Wait()
+
 		// err = s.DeleteURLs(userID, shortURLs...)
 		// if err != nil {
 		// 	logger.Log.Error("error in DeleteURLs()", zap.String("userID", userID), zap.Strings("shortURLs", shortURLs), zap.String("error", err.Error()))
